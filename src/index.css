@@ -1,0 +1,41 @@
+@import "./styles/designSystem.css";
+@import "./styles/retroEffects.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Apply CRT effect to the root element */
+#root {
+	min-height: 100vh;
+	background: #000;
+	color: var(--terminal-green);
+}
+
+/* 根元素的 CRT 效果现在将通过 .crt 类来控制 */
+#root.crt {
+	animation: flicker 0.15s infinite;
+	position: relative;
+	overflow: hidden;
+}
+
+#root.crt::before {
+	content: " ";
+	display: block;
+	position: absolute;
+	top: 0;
+	left: 0;
+	bottom: 0;
+	right: 0;
+	background: linear-gradient(
+		to bottom,
+		rgba(18, 16, 16, 0) 50%,
+		rgba(0, 0, 0, 0.25) 50%
+	);
+	background-size: 100% 4px;
+	pointer-events: none;
+	z-index: 100;
+}
+
+/* 移除直接在 body 上添加的扫描线效果 */
+/* 扫描线现在完全由 CrtEffectProvider 组件控制 */

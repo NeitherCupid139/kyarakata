@@ -1,0 +1,241 @@
+/* 复古风格的滚动条 */
+.scrollbar-retro::-webkit-scrollbar {
+	width: 14px;
+	height: 14px;
+	background-color: #0a0a0a;
+}
+
+.scrollbar-retro::-webkit-scrollbar-track {
+	background-color: #000000;
+	border: 1px dashed #0c4a6e;
+	border-radius: 0;
+}
+
+.scrollbar-retro::-webkit-scrollbar-thumb {
+	background-color: #0e7490;
+	border: 2px solid #001b27;
+	box-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+}
+
+.scrollbar-retro::-webkit-scrollbar-thumb:hover {
+	background-color: #06b6d4;
+}
+
+.scrollbar-retro::-webkit-scrollbar-corner {
+	background-color: #000000;
+}
+
+/* 老式监视器效果 - CRT闪烁 */
+@keyframes flicker {
+	0% {
+		opacity: 0.97;
+	}
+	5% {
+		opacity: 0.95;
+	}
+	10% {
+		opacity: 0.9;
+	}
+	15% {
+		opacity: 0.93;
+	}
+	20% {
+		opacity: 0.99;
+	}
+	25% {
+		opacity: 0.92;
+	}
+	30% {
+		opacity: 0.96;
+	}
+	35% {
+		opacity: 0.99;
+	}
+	40% {
+		opacity: 0.98;
+	}
+	45% {
+		opacity: 0.96;
+	}
+	50% {
+		opacity: 0.97;
+	}
+	55% {
+		opacity: 0.95;
+	}
+	60% {
+		opacity: 0.97;
+	}
+	65% {
+		opacity: 0.95;
+	}
+	70% {
+		opacity: 0.96;
+	}
+	75% {
+		opacity: 0.94;
+	}
+	80% {
+		opacity: 0.98;
+	}
+	85% {
+		opacity: 0.93;
+	}
+	90% {
+		opacity: 0.97;
+	}
+	95% {
+		opacity: 0.95;
+	}
+	100% {
+		opacity: 0.96;
+	}
+}
+
+/* 老式像素化点阵字体 */
+.retro-font {
+	font-family: "VT323", "Courier New", monospace;
+	letter-spacing: 0.1em;
+	line-height: 1.2;
+	text-transform: uppercase;
+}
+
+/* 像素噪点效果 */
+.pixel-noise {
+	position: relative;
+	overflow: hidden;
+}
+
+.pixel-noise::after {
+	content: "";
+	pointer-events: none;
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-image: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAACXBIWXMAAAsTAAALEwEAmpwYAAABQUlEQVR4nO3ZwapBURjG8SUjA2WAO3ALBgbKwJ24AXdgZmCq3IKRmYGBMnAD7oChcgOftZ+6Bw7n7L3evda39q+njtNT+1RrqZRIJBIJD0AZqAAVoAJUZP0i6yD6Dxin+AKuwDUG5gbcgFsMTBe4A93QmAXwABahMTngCTxDY1rAC2iFxnSAAdAJjekCQ6AbGjMAJsAgNGYETIFRaMwYmAHj0JgFsAQWQR/4V8wK2ACrT2NUK7IFdsA2NGYPHPgAY8GcgDNwCo05Axc+wFgwV+AG3EJjHvwe053QmBefnfvQmHdwAA6hMRc+M5fQmBt/5bpFmMfHx4JR7V95P9uExvTet+ce7ypjwajOifzMPjRGdW9X3d9DY/72PaIq8qeYqohqHVOddaoiqp8fqp8fqiKqIttz1UqEKqIqcopBIpH4T/0A8SzKJTP3mYkAAAAASUVORK5CYII=");
+	opacity: 0.03;
+	z-index: 10;
+}
+
+/* ASCII Border 效果 */
+.ascii-border {
+	position: relative;
+	padding: 12px;
+}
+
+.ascii-border::before {
+	content: "╔═════════════════════════════════════════════════╗";
+	position: absolute;
+	top: 0;
+	left: 0;
+	font-family: monospace;
+	color: #0e7490;
+	white-space: nowrap;
+	font-size: 12px;
+	line-height: 12px;
+}
+
+.ascii-border::after {
+	content: "╚═════════════════════════════════════════════════╝";
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	font-family: monospace;
+	color: #0e7490;
+	white-space: nowrap;
+	font-size: 12px;
+	line-height: 12px;
+}
+
+/* 打字机效果 */
+@keyframes typewriter {
+	from {
+		width: 0;
+	}
+	to {
+		width: 100%;
+	}
+}
+
+.typewriter {
+	overflow: hidden;
+	white-space: nowrap;
+	animation: typewriter 2s steps(40, end) forwards;
+}
+
+/* 旧式彩色阴影效果 */
+.retro-text-shadow {
+	text-shadow: 0.05em 0 0 rgba(255, 0, 0, 0.75),
+		-0.025em -0.05em 0 rgba(0, 255, 0, 0.75),
+		0.025em 0.05em 0 rgba(0, 0, 255, 0.75);
+}
+
+/* 屏幕闪烁效果 */
+@keyframes screen-flicker {
+	0% {
+		opacity: 1;
+	}
+	10% {
+		opacity: 0.6;
+	}
+	15% {
+		opacity: 0.9;
+	}
+	20% {
+		opacity: 0.2;
+	}
+	25% {
+		opacity: 0.9;
+	}
+	30% {
+		opacity: 0.8;
+	}
+	35% {
+		opacity: 0.7;
+	}
+	40% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+.screen-flicker {
+	animation: screen-flicker 0.3s ease-in-out forwards;
+}
+
+/* CRT覆盖层 */
+.crt-overlay {
+	pointer-events: none;
+	z-index: 9999;
+}
+
+/* 添加键盘点击波动效果 */
+@keyframes key-press-wave {
+	0% {
+		transform: scale(1);
+		opacity: 0.5;
+	}
+	50% {
+		transform: scale(1.2);
+		opacity: 0.2;
+	}
+	100% {
+		transform: scale(1);
+		opacity: 0;
+	}
+}
+
+.key-press-effect {
+	position: absolute;
+	width: 30px;
+	height: 30px;
+	border-radius: 50%;
+	background-color: rgba(0, 255, 255, 0.4);
+	pointer-events: none;
+	z-index: 100;
+	animation: key-press-wave 0.4s ease-out forwards;
+}
