@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -28,6 +28,14 @@ function Events() {
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [currentEvent, setCurrentEvent] = useState<EventData | null>(null);
+	const [submitting, setSubmitting] = useState(false);
+
+	// 新增表单状态
+	const [formData, setFormData] = useState({
+		title: "",
+		description: "",
+		timestamp: "",
+	});
 
 	const fetchEvents = async () => {
 		try {
@@ -81,6 +89,23 @@ function Events() {
 		fetchEvents();
 	}, []);
 
+	// 当打开编辑模态框时初始化表单数据
+	useEffect(() => {
+		if (currentEvent) {
+			setFormData({
+				title: currentEvent.title,
+				description: currentEvent.description,
+				timestamp: new Date(currentEvent.timestamp).toISOString().slice(0, 16),
+			});
+		} else {
+			setFormData({
+				title: "",
+				description: "",
+				timestamp: "",
+			});
+		}
+	}, [currentEvent]);
+
 	const filteredEvents = events.filter(
 		(event) =>
 			event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -100,25 +125,86 @@ function Events() {
 	const handleDeleteEvent = async (id: number) => {
 		if (window.confirm("确定要删除这个事件吗？")) {
 			try {
-				// 真实应用中应该从Supabase删除事件
-				// const { error } = await supabase.from('events').delete().eq('id', id);
+				const { error } = await supabase.from("events").delete().eq("id", id);
 
-				// 演示目的，仅从状态中过滤掉该事件
+				if (error) throw error;
+
+				// 从状态中移除已删除的事件
 				setEvents(events.filter((event) => event.id !== id));
 			} catch (error) {
 				console.error("删除事件失败:", error);
+				alert("删除事件失败，请重试");
 			}
 		}
+	};
+
+	// 处理表单提交
+	const handleSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+
+		if (!formData.title || !formData.timestamp) {
+			alert("请填写事件标题和时间");
+			return;
+		}
+
+		try {
+			setSubmitting(true);
+
+			if (currentEvent) {
+				// 更新现有事件
+				const { error } = await supabase
+					.from("events")
+					.update({
+						title: formData.title,
+						description: formData.description,
+						timestamp: formData.timestamp,
+						updated_at: new Date().toISOString(),
+					})
+					.eq("id", currentEvent.id);
+
+				if (error) throw error;
+			} else {
+				// 创建新事件
+				const { error } = await supabase.from("events").insert({
+					title: formData.title,
+					description: formData.description,
+					timestamp: formData.timestamp,
+					created_at: new Date().toISOString(),
+					updated_at: new Date().toISOString(),
+				});
+
+				if (error) throw error;
+			}
+
+			// 成功后关闭模态框并刷新事件列表
+			setIsModalOpen(false);
+			fetchEvents();
+		} catch (error) {
+			console.error("保存事件失败:", error);
+			alert("保存事件失败，请重试");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	// 更新表单字段处理函数
+	const handleInputChange = (field: string, value: string) => {
+		setFormData({
+			...formData,
+			[field]: value,
+		});
 	};
 
 	// 事件表单组件
 	const EventForm = () => {
 		return (
-			<div className="mt-5 space-y-4">
+			<form onSubmit={handleSubmit} className="mt-5 space-y-4">
 				<Input
 					label="事件标题"
-					defaultValue={currentEvent?.title || ""}
+					value={formData.title}
+					onChange={(e) => handleInputChange("title", e.target.value)}
 					placeholder="输入事件标题"
+					required
 				/>
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -126,7 +212,8 @@ function Events() {
 					</label>
 					<textarea
 						rows={4}
-						defaultValue={currentEvent?.description || ""}
+						value={formData.description}
+						onChange={(e) => handleInputChange("description", e.target.value)}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
 						placeholder="输入事件描述"
 					></textarea>
@@ -134,12 +221,10 @@ function Events() {
 				<Input
 					label="事件发生时间"
 					type="datetime-local"
-					defaultValue={
-						currentEvent
-							? new Date(currentEvent.timestamp).toISOString().slice(0, 16)
-							: ""
-					}
+					value={formData.timestamp}
+					onChange={(e) => handleInputChange("timestamp", e.target.value)}
 					placeholder="选择事件发生时间"
+					required
 				/>
 
 				<div className="flex justify-end space-x-3 pt-5">
@@ -147,21 +232,19 @@ function Events() {
 						variant="outline"
 						onClick={() => setIsModalOpen(false)}
 						leftIcon={<X size={16} />}
+						type="button"
 					>
 						取消
 					</Button>
 					<Button
 						leftIcon={<Check size={16} />}
-						onClick={() => {
-							// 真实应用中，应该保存事件到Supabase
-							setIsModalOpen(false);
-							fetchEvents();
-						}}
+						type="submit"
+						disabled={submitting}
 					>
-						{currentEvent ? "更新事件" : "创建事件"}
+						{submitting ? "提交中..." : currentEvent ? "更新事件" : "创建事件"}
 					</Button>
 				</div>
-			</div>
+			</form>
 		);
 	};
 

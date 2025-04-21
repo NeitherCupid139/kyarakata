@@ -1,27 +1,29 @@
 import { useState, FormEvent, useEffect, useRef } from "react";
 import { Navigate, Link } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
-import { Lock, User, Terminal, Zap } from "lucide-react";
+import { Lock, User, Zap, Mail, UserPlus } from "lucide-react";
 import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 
-function Login() {
+function Register() {
+	const [username, setUsername] = useState("");
 	const [email, setEmail] = useState("");
 	const [password, setPassword] = useState("");
+	const [confirmPassword, setConfirmPassword] = useState("");
 	const [bootSequence, setBootSequence] = useState(true);
 	const [showAsciiArt, setShowAsciiArt] = useState(false);
 	const [bootText, setBootText] = useState<string[]>([]);
 	const formRef = useRef<HTMLFormElement>(null);
-	const { login, user, loading, error } = useAuthStore();
+	const { register, user, loading, error } = useAuthStore();
 
 	useEffect(() => {
 		// 启动序列动画
 		const bootLines = [
 			"初始化系统...",
-			"加载驱动程序...",
-			"检查安全协议...",
-			"启动用户验证模块...",
-			"准备登录界面...",
+			"加载新用户模块...",
+			"准备注册协议...",
+			"启动安全验证...",
+			"准备注册界面...",
 		];
 
 		bootLines.forEach((line, index) => {
@@ -58,7 +60,12 @@ function Login() {
 		document.body.classList.add("screen-flicker");
 		setTimeout(() => document.body.classList.remove("screen-flicker"), 300);
 
-		await login(email, password);
+		if (password !== confirmPassword) {
+			// 处理密码不匹配的情况
+			return;
+		}
+
+		await register(username, email, password);
 	};
 
 	// Redirect if already logged in
@@ -67,10 +74,10 @@ function Login() {
 	}
 
 	const asciiLogo = `
- _    ___   ___ ___ _  _   ___  _   _  _ ___ _    
-| |  / _ \\ / __|_ _| \\| | | _ \\/_\\ | \\| | __| |   
-| |_| (_) | (_ || || .\` | |  _/ _ \\| .\` | _|| |__ 
-|____\\___/ \\___|___|_|\\_| |_|/_/ \\_\\_|\\_|___|____|
+ ___  ___  ___ ___ ___ _____ ___ ___  
+| _ \\| __| / __|_ _/ __|_   _| __| _ \\ 
+|   /| _|  \\__ \\| |\\__ \\ | | | _||   / 
+|_|_\\|___| |___/___|___/ |_| |___|_|_\\ 
 `;
 
 	return (
@@ -108,7 +115,7 @@ function Login() {
 
 					<div className="ascii-border">
 						<h2 className="mt-2 text-center text-2xl retro-font text-cyan-400 retro-text-shadow">
-							═══ 登录 ═══
+							═══ 注册 ═══
 						</h2>
 					</div>
 
@@ -121,13 +128,32 @@ function Login() {
 					>
 						<div className="space-y-4 pixel-noise">
 							<Input
+								id="username"
+								name="username"
+								type="text"
+								autoComplete="username"
+								required
+								label="用户名:"
+								leftIcon={<User className="h-5 w-5 text-cyan-400" />}
+								value={username}
+								onChange={(e) => {
+									// 添加按键音效反馈
+									const audio = new Audio("/sounds/keypress.mp3");
+									audio.volume = 0.2;
+									audio.play().catch(() => {});
+									setUsername(e.target.value);
+								}}
+								className="input-retro bg-black text-cyan-300 border-cyan-700 focus:border-cyan-400"
+							/>
+
+							<Input
 								id="email"
 								name="email"
 								type="email"
 								autoComplete="email"
 								required
-								label="账号:"
-								leftIcon={<User className="h-5 w-5 text-cyan-400" />}
+								label="邮箱:"
+								leftIcon={<Mail className="h-5 w-5 text-cyan-400" />}
 								value={email}
 								onChange={(e) => {
 									// 添加按键音效反馈
@@ -143,7 +169,7 @@ function Login() {
 								id="password"
 								name="password"
 								type="password"
-								autoComplete="current-password"
+								autoComplete="new-password"
 								required
 								label="密码:"
 								leftIcon={<Lock className="h-5 w-5 text-cyan-400" />}
@@ -157,12 +183,31 @@ function Login() {
 								}}
 								className="input-retro bg-black text-cyan-300 border-cyan-700 focus:border-cyan-400"
 							/>
+
+							<Input
+								id="confirmPassword"
+								name="confirmPassword"
+								type="password"
+								autoComplete="new-password"
+								required
+								label="确认密码:"
+								leftIcon={<Lock className="h-5 w-5 text-cyan-400" />}
+								value={confirmPassword}
+								onChange={(e) => {
+									// 添加按键音效反馈
+									const audio = new Audio("/sounds/keypress.mp3");
+									audio.volume = 0.2;
+									audio.play().catch(() => {});
+									setConfirmPassword(e.target.value);
+								}}
+								className="input-retro bg-black text-cyan-300 border-cyan-700 focus:border-cyan-400"
+							/>
 						</div>
 
 						{error && (
 							<div className="text-red-500 text-sm text-center typewriter terminal-glow blink">
 								<Zap className="inline-block h-4 w-4 mr-1" />
-								&gt;&gt; 登录失败: {error} &lt;&lt;
+								&gt;&gt; 注册失败: {error} &lt;&lt;
 								<Zap className="inline-block h-4 w-4 ml-1" />
 							</div>
 						)}
@@ -172,19 +217,19 @@ function Login() {
 								type="submit"
 								className="w-full btn-cyan retro-font"
 								isLoading={loading}
-								loadingText="登录中..."
-								leftIcon={<Terminal className="h-4 w-4" />}
+								loadingText="注册中..."
+								leftIcon={<UserPlus className="h-4 w-4" />}
 							>
-								登录
+								注册
 							</Button>
 						</div>
 
 						<div className="text-cyan-600 text-center mt-2">
 							<Link
-								to="/register"
+								to="/login"
 								className="hover:text-cyan-400 transition-colors"
 							>
-								没有账号？立即注册
+								已有账号？返回登录
 							</Link>
 						</div>
 
@@ -204,4 +249,4 @@ function Login() {
 	);
 }
 
-export default Login;
+export default Register;

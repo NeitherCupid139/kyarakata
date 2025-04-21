@@ -12,9 +12,9 @@ import DashboardLayout from "./components/layouts/DashboardLayout";
 
 // Pages
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 
-import Products from "./pages/Products";
 import Settings from "./pages/Settings";
 import NotFound from "./pages/NotFound";
 
@@ -59,6 +59,7 @@ function App() {
 				<Router>
 					<Routes>
 						<Route path="/login" element={<Login />} />
+						<Route path="/register" element={<Register />} />
 
 						<Route
 							path="/"
@@ -70,7 +71,6 @@ function App() {
 						>
 							<Route index element={<Dashboard />} />
 
-							<Route path="products" element={<Products />} />
 							<Route path="chapters" element={<Chapters />} />
 							<Route path="novels" element={<Novels />} />
 							<Route path="world-settings" element={<WorldSettings />} />

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -29,6 +29,15 @@ function Relationships() {
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [currentRelationship, setCurrentRelationship] =
 		useState<RelationshipData | null>(null);
+	const [submitting, setSubmitting] = useState(false);
+
+	// 新增表单状态
+	const [formData, setFormData] = useState({
+		character1_id: "",
+		character2_id: "",
+		relationship_type: "",
+		description: "",
+	});
 
 	const fetchCharacters = async () => {
 		try {
@@ -142,6 +151,25 @@ function Relationships() {
 		}
 	}, [characters]);
 
+	// 当打开编辑模态框时初始化表单数据
+	useEffect(() => {
+		if (currentRelationship) {
+			setFormData({
+				character1_id: currentRelationship.character1_id.toString(),
+				character2_id: currentRelationship.character2_id.toString(),
+				relationship_type: currentRelationship.relationship_type,
+				description: currentRelationship.description,
+			});
+		} else {
+			setFormData({
+				character1_id: "",
+				character2_id: "",
+				relationship_type: "",
+				description: "",
+			});
+		}
+	}, [currentRelationship]);
+
 	const filteredRelationships = relationships.filter(
 		(relationship) =>
 			(relationship.character1_name?.toLowerCase() || "").includes(
@@ -169,17 +197,90 @@ function Relationships() {
 	const handleDeleteRelationship = async (id: number) => {
 		if (window.confirm("确定要删除这个角色关系吗？")) {
 			try {
-				// 真实应用中应该从Supabase删除关系
-				// const { error } = await supabase.from('character_relationships').delete().eq('id', id);
+				const { error } = await supabase
+					.from("character_relationships")
+					.delete()
+					.eq("id", id);
 
-				// 演示目的，仅从状态中过滤掉该关系
+				if (error) throw error;
+
+				// 从状态中移除已删除的关系
 				setRelationships(
 					relationships.filter((relationship) => relationship.id !== id)
 				);
 			} catch (error) {
 				console.error("删除角色关系失败:", error);
+				alert("删除角色关系失败，请重试");
 			}
 		}
+	};
+
+	// 处理表单提交
+	const handleSubmit = async (e: FormEvent) => {
+		e.preventDefault();
+
+		if (
+			!formData.character1_id ||
+			!formData.character2_id ||
+			!formData.relationship_type
+		) {
+			alert("请选择两个角色并指定关系类型");
+			return;
+		}
+
+		if (formData.character1_id === formData.character2_id) {
+			alert("不能为同一个角色创建关系");
+			return;
+		}
+
+		try {
+			setSubmitting(true);
+
+			if (currentRelationship) {
+				// 更新现有关系
+				const { error } = await supabase
+					.from("character_relationships")
+					.update({
+						character1_id: parseInt(formData.character1_id),
+						character2_id: parseInt(formData.character2_id),
+						relationship_type: formData.relationship_type,
+						description: formData.description,
+					})
+					.eq("id", currentRelationship.id);
+
+				if (error) throw error;
+			} else {
+				// 创建新关系
+				const { error } = await supabase
+					.from("character_relationships")
+					.insert({
+						character1_id: parseInt(formData.character1_id),
+						character2_id: parseInt(formData.character2_id),
+						relationship_type: formData.relationship_type,
+						description: formData.description,
+						created_at: new Date().toISOString(),
+					});
+
+				if (error) throw error;
+			}
+
+			// 成功后关闭模态框并刷新关系列表
+			setIsModalOpen(false);
+			fetchRelationships();
+		} catch (error) {
+			console.error("保存角色关系失败:", error);
+			alert("保存角色关系失败，请重试");
+		} finally {
+			setSubmitting(false);
+		}
+	};
+
+	// 更新表单字段处理函数
+	const handleInputChange = (field: string, value: string) => {
+		setFormData({
+			...formData,
+			[field]: value,
+		});
 	};
 
 	// 关系类型选项
@@ -200,14 +301,16 @@ function Relationships() {
 	// 关系表单组件
 	const RelationshipForm = () => {
 		return (
-			<div className="mt-5 space-y-4">
+			<form onSubmit={handleSubmit} className="mt-5 space-y-4">
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						角色1
 					</label>
 					<select
-						defaultValue={currentRelationship?.character1_id || ""}
+						value={formData.character1_id}
+						onChange={(e) => handleInputChange("character1_id", e.target.value)}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						required
 					>
 						<option value="">选择角色</option>
 						{characters.map((character) => (
@@ -223,8 +326,10 @@ function Relationships() {
 						角色2
 					</label>
 					<select
-						defaultValue={currentRelationship?.character2_id || ""}
+						value={formData.character2_id}
+						onChange={(e) => handleInputChange("character2_id", e.target.value)}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						required
 					>
 						<option value="">选择角色</option>
 						{characters.map((character) => (
@@ -240,8 +345,12 @@ function Relationships() {
 						关系类型
 					</label>
 					<select
-						defaultValue={currentRelationship?.relationship_type || ""}
+						value={formData.relationship_type}
+						onChange={(e) =>
+							handleInputChange("relationship_type", e.target.value)
+						}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						required
 					>
 						<option value="">选择关系类型</option>
 						{relationshipTypes.map((type) => (
@@ -258,7 +367,8 @@ function Relationships() {
 					</label>
 					<textarea
 						rows={4}
-						defaultValue={currentRelationship?.description || ""}
+						value={formData.description}
+						onChange={(e) => handleInputChange("description", e.target.value)}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
 						placeholder="输入角色之间关系的详细描述"
 					></textarea>
@@ -269,21 +379,23 @@ function Relationships() {
 						variant="outline"
 						onClick={() => setIsModalOpen(false)}
 						leftIcon={<X size={16} />}
+						type="button"
 					>
 						取消
 					</Button>
 					<Button
 						leftIcon={<Check size={16} />}
-						onClick={() => {
-							// 真实应用中，应该保存关系到Supabase
-							setIsModalOpen(false);
-							fetchRelationships();
-						}}
+						type="submit"
+						disabled={submitting}
 					>
-						{currentRelationship ? "更新关系" : "创建关系"}
+						{submitting
+							? "提交中..."
+							: currentRelationship
+							? "更新关系"
+							: "创建关系"}
 					</Button>
 				</div>
-			</div>
+			</form>
 		);
 	};
 

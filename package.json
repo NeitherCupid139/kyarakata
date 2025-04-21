@@ -13,8 +13,9 @@
 		"db:studio": "drizzle-kit studio"
 	},
 	"dependencies": {
-		"@supabase/postgrest-js": "^2.39.7",
+		"@supabase/postgrest-js": "^1.19.4",
 		"@supabase/supabase-js": "^2.39.7",
+		"ai": "^4.3.9",
 		"clsx": "^2.1.0",
 		"date-fns": "^3.3.1",
 		"drizzle-orm": "^0.42.0",
@@ -24,6 +25,7 @@
 		"react-dom": "^18.3.1",
 		"react-router-dom": "^6.22.3",
 		"tailwind-merge": "^2.2.1",
+		"zhipu-ai-provider": "^0.1.1",
 		"zustand": "^5.0.3"
 	},
 	"devDependencies": {

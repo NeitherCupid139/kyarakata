@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -13,6 +13,7 @@ import {
 	BookText,
 	ArrowLeft,
 } from "lucide-react";
+import ChapterReview from "@/components/ChapterReview";
 
 // 明确定义类型
 interface ChapterData {
@@ -45,6 +46,8 @@ export default function Chapters() {
 	const [currentChapter, setCurrentChapter] = useState<ChapterData | null>(
 		null
 	);
+	const [showReview, setShowReview] = useState(false);
+	const contentRef = useRef<HTMLTextAreaElement>(null);
 
 	// 从URL获取novel_id (在实际应用中使用路由参数)
 	const getNovelIdFromUrl = () => {
@@ -218,6 +221,7 @@ export default function Chapters() {
 	const openEditModal = (chapter: ChapterData) => {
 		setCurrentChapter(chapter);
 		setIsModalOpen(true);
+		setShowReview(false);
 	};
 
 	const openCreateModal = () => {
@@ -241,6 +245,7 @@ export default function Chapters() {
 			updated_at: new Date().toISOString(),
 		});
 		setIsModalOpen(true);
+		setShowReview(false);
 	};
 
 	const handleDeleteChapter = async (id: number) => {
@@ -254,6 +259,93 @@ export default function Chapters() {
 			} catch (error) {
 				console.error("删除章节失败:", error);
 			}
+		}
+	};
+
+	const handleStartReview = () => {
+		if (!contentRef.current?.value) {
+			alert("请先输入章节内容再进行审核");
+			return;
+		}
+
+		// 更新当前章节的内容
+		if (currentChapter) {
+			setCurrentChapter({
+				...currentChapter,
+				title:
+					document.querySelector<HTMLInputElement>(
+						'input[placeholder="输入章节标题"]'
+					)?.value || "",
+				chapter_number: parseInt(
+					document.querySelector<HTMLInputElement>(
+						'input[placeholder="输入章节编号"]'
+					)?.value || "1"
+				),
+				content: contentRef.current.value,
+			});
+		}
+
+		setShowReview(true);
+	};
+
+	const handleReviewComplete = (approved: boolean, feedback: string) => {
+		if (approved) {
+			// 在真实应用中，这里会保存章节到数据库
+			setIsModalOpen(false);
+			fetchChapters(); // 重新获取章节列表
+			alert("章节已审核通过并发布");
+		} else {
+			// 返回编辑状态，显示反馈
+			setShowReview(false);
+			alert(`章节审核未通过: ${feedback}`);
+		}
+	};
+
+	const handleSaveChapter = async () => {
+		if (!currentChapter || !contentRef.current) return;
+
+		try {
+			const chapterData = {
+				novel_id: currentChapter.novel_id,
+				title:
+					document.querySelector<HTMLInputElement>(
+						'input[placeholder="输入章节标题"]'
+					)?.value || "",
+				chapter_number: parseInt(
+					document.querySelector<HTMLInputElement>(
+						'input[placeholder="输入章节编号"]'
+					)?.value || "1"
+				),
+				content: contentRef.current.value,
+				updated_at: new Date().toISOString(),
+			};
+
+			if (currentChapter.id === 0) {
+				// 创建新章节
+				const { data, error } = await supabase
+					.from("chapters")
+					.insert([{ ...chapterData, created_at: new Date().toISOString() }])
+					.select();
+
+				if (error) throw error;
+				console.log("章节创建成功:", data);
+			} else {
+				// 更新现有章节
+				const { data, error } = await supabase
+					.from("chapters")
+					.update(chapterData)
+					.eq("id", currentChapter.id)
+					.select();
+
+				if (error) throw error;
+				console.log("章节更新成功:", data);
+			}
+
+			setIsModalOpen(false);
+			fetchChapters(); // 重新获取章节列表
+		} catch (error) {
+			console.error("保存章节失败:", error);
+			alert("保存章节失败，请重试");
 		}
 	};
 
@@ -277,6 +369,7 @@ export default function Chapters() {
 						章节内容
 					</label>
 					<textarea
+						ref={contentRef}
 						rows={10}
 						defaultValue={currentChapter?.content || ""}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
@@ -293,13 +386,13 @@ export default function Chapters() {
 						取消
 					</Button>
 					<Button
-						leftIcon={<Check size={16} />}
-						onClick={() => {
-							// 真实应用中，应该保存章节到Supabase
-							setIsModalOpen(false);
-							fetchChapters();
-						}}
+						variant="outline"
+						onClick={handleStartReview}
+						className="text-blue-500"
 					>
+						审核内容
+					</Button>
+					<Button leftIcon={<Check size={16} />} onClick={handleSaveChapter}>
 						{currentChapter?.id ? "更新章节" : "创建章节"}
 					</Button>
 				</div>
@@ -513,7 +606,15 @@ export default function Chapters() {
 								<h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
 									{currentChapter?.id ? "编辑章节" : "创建新章节"}
 								</h3>
-								<ChapterForm />
+
+								{showReview && currentChapter ? (
+									<ChapterReview
+										chapterContent={currentChapter.content}
+										onReviewComplete={handleReviewComplete}
+									/>
+								) : (
+									<ChapterForm />
+								)}
 							</div>
 						</div>
 					</div>

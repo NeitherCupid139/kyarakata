@@ -1,0 +1,115 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* 老式CRT显示器效果 */
+@keyframes scanline {
+	0% {
+		transform: translateY(-100%);
+	}
+	100% {
+		transform: translateY(100vh);
+	}
+}
+
+@keyframes flicker {
+	0% {
+		opacity: 0.8;
+	}
+	5% {
+		opacity: 0.9;
+	}
+	10% {
+		opacity: 0.8;
+	}
+	15% {
+		opacity: 1;
+	}
+	20% {
+		opacity: 0.7;
+	}
+	25% {
+		opacity: 0.9;
+	}
+	30% {
+		opacity: 0.8;
+	}
+	35% {
+		opacity: 1;
+	}
+	40% {
+		opacity: 0.7;
+	}
+	45% {
+		opacity: 0.9;
+	}
+	50% {
+		opacity: 1;
+	}
+	55% {
+		opacity: 0.8;
+	}
+	60% {
+		opacity: 0.7;
+	}
+	65% {
+		opacity: 0.9;
+	}
+	70% {
+		opacity: 0.7;
+	}
+	75% {
+		opacity: 0.9;
+	}
+	80% {
+		opacity: 0.8;
+	}
+	85% {
+		opacity: 1;
+	}
+	90% {
+		opacity: 0.7;
+	}
+	95% {
+		opacity: 0.9;
+	}
+	100% {
+		opacity: 1;
+	}
+}
+
+.animate-scanline {
+	animation: scanline 2s linear infinite;
+}
+
+.animate-flicker {
+	animation: flicker 3s infinite;
+}
+
+/* 仿全息投影效果 */
+.hologram-text {
+	text-shadow: 0 0 5px rgba(0, 255, 0, 0.8), 0 0 10px rgba(0, 255, 0, 0.5),
+		0 0 15px rgba(0, 255, 0, 0.3);
+}
+
+/* 电子光标闪烁效果 */
+.cursor-blink {
+	animation: blink 1.2s infinite;
+}
+
+@keyframes blink {
+	0%,
+	49% {
+		opacity: 1;
+	}
+	50%,
+	100% {
+		opacity: 0;
+	}
+}
+
+/* 按钮按下效果 */
+.button-press:active {
+	transform: scale(0.95);
+	box-shadow: inset 0 0 10px rgba(0, 255, 0, 0.8);
+}

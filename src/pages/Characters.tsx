@@ -114,6 +114,71 @@ function Characters() {
 		}
 	};
 
+	const handleSaveCharacter = async () => {
+		try {
+			// 获取表单数据
+			const nameInput = document.querySelector<HTMLInputElement>(
+				'input[placeholder="输入角色名称"]'
+			);
+			const genderSelect = document.querySelector<HTMLSelectElement>("select");
+			const ageInput = document.querySelector<HTMLInputElement>(
+				'input[placeholder="输入角色年龄"]'
+			);
+			const backgroundTextarea = document.querySelector<HTMLTextAreaElement>(
+				'textarea[placeholder="输入角色背景故事"]'
+			);
+			const personalityTextarea = document.querySelector<HTMLTextAreaElement>(
+				'textarea[placeholder="输入角色性格描述"]'
+			);
+
+			if (
+				!nameInput ||
+				!genderSelect ||
+				!ageInput ||
+				!backgroundTextarea ||
+				!personalityTextarea
+			) {
+				throw new Error("无法获取表单元素");
+			}
+
+			const characterData = {
+				name: nameInput.value,
+				gender: genderSelect.value,
+				age: parseInt(ageInput.value) || 0,
+				background: backgroundTextarea.value,
+				personality: personalityTextarea.value,
+				updated_at: new Date().toISOString(),
+			};
+
+			if (currentCharacter) {
+				// 更新现有角色
+				const { data, error } = await supabase
+					.from("characters")
+					.update(characterData)
+					.eq("id", currentCharacter.id)
+					.select();
+
+				if (error) throw error;
+				console.log("角色更新成功:", data);
+			} else {
+				// 创建新角色
+				const { data, error } = await supabase
+					.from("characters")
+					.insert([{ ...characterData, created_at: new Date().toISOString() }])
+					.select();
+
+				if (error) throw error;
+				console.log("角色创建成功:", data);
+			}
+
+			setIsModalOpen(false);
+			fetchCharacters(); // 重新获取角色列表
+		} catch (error) {
+			console.error("保存角色失败:", error);
+			alert("保存角色失败，请重试");
+		}
+	};
+
 	// 角色表单组件
 	const CharacterForm = () => {
 		return (
@@ -173,14 +238,7 @@ function Characters() {
 					>
 						取消
 					</Button>
-					<Button
-						leftIcon={<Check size={16} />}
-						onClick={() => {
-							// 真实应用中，应该保存角色到Supabase
-							setIsModalOpen(false);
-							fetchCharacters();
-						}}
-					>
+					<Button leftIcon={<Check size={16} />} onClick={handleSaveCharacter}>
 						{currentCharacter ? "更新角色" : "创建角色"}
 					</Button>
 				</div>

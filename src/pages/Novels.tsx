@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, FormEvent } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
@@ -25,12 +25,20 @@ interface NovelData {
 	chapter_count?: number;
 }
 
+interface NovelFormData {
+	title: string;
+	author: string;
+	description: string;
+	cover_image_url: string;
+}
+
 function Novels() {
 	const [novels, setNovels] = useState<NovelData[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
 	const [currentNovel, setCurrentNovel] = useState<NovelData | null>(null);
+	const [formSubmitting, setFormSubmitting] = useState(false);
 
 	const fetchNovels = async () => {
 		try {
@@ -49,7 +57,7 @@ function Novels() {
 			if (novelsData) {
 				const novelsWithChapterCount = await Promise.all(
 					novelsData.map(async (novel) => {
-						const { count, error } = await supabase
+						const { count } = await supabase
 							.from("chapters")
 							.select("id", { count: "exact", head: true })
 							.eq("novel_id", novel.id);
@@ -142,55 +150,133 @@ function Novels() {
 
 	// 小说表单组件
 	const NovelForm = () => {
+		const [formData, setFormData] = useState<NovelFormData>({
+			title: currentNovel?.title || "",
+			author: currentNovel?.author || "",
+			description: currentNovel?.description || "",
+			cover_image_url: currentNovel?.cover_image_url || "",
+		});
+
+		const handleInputChange = (
+			e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+		) => {
+			const { name, value } = e.target;
+			setFormData((prev) => ({
+				...prev,
+				[name]: value,
+			}));
+		};
+
+		const handleSubmit = async (e: FormEvent) => {
+			e.preventDefault();
+			if (!formData.title || !formData.author) {
+				alert("标题和作者为必填项");
+				return;
+			}
+
+			setFormSubmitting(true);
+			try {
+				if (currentNovel) {
+					// 更新小说
+					const { error } = await supabase
+						.from("novels")
+						.update({
+							title: formData.title,
+							author: formData.author,
+							description: formData.description,
+							cover_image_url: formData.cover_image_url,
+							updated_at: new Date().toISOString(),
+						})
+						.eq("id", currentNovel.id);
+
+					if (error) throw error;
+				} else {
+					// 创建新小说
+					const { error } = await supabase.from("novels").insert({
+						title: formData.title,
+						author: formData.author,
+						description: formData.description,
+						cover_image_url: formData.cover_image_url,
+						created_at: new Date().toISOString(),
+						updated_at: new Date().toISOString(),
+					});
+
+					if (error) throw error;
+				}
+
+				// 刷新小说列表
+				await fetchNovels();
+				setIsModalOpen(false);
+			} catch (error) {
+				console.error(currentNovel ? "更新小说失败:" : "创建小说失败:", error);
+				alert(currentNovel ? "更新小说失败" : "创建小说失败");
+			} finally {
+				setFormSubmitting(false);
+			}
+		};
+
 		return (
-			<div className="mt-5 space-y-4">
+			<form onSubmit={handleSubmit} className="mt-5 space-y-4">
 				<Input
 					label="小说标题"
-					defaultValue={currentNovel?.title || ""}
+					name="title"
+					value={formData.title}
+					onChange={handleInputChange}
 					placeholder="输入小说标题"
+					required
 				/>
 				<Input
 					label="作者"
-					defaultValue={currentNovel?.author || ""}
+					name="author"
+					value={formData.author}
+					onChange={handleInputChange}
 					placeholder="输入作者姓名"
+					required
 				/>
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
 						简介
 					</label>
 					<textarea
+						name="description"
 						rows={4}
-						defaultValue={currentNovel?.description || ""}
+						value={formData.description}
+						onChange={handleInputChange}
 						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
 						placeholder="输入小说简介"
 					></textarea>
 				</div>
 				<Input
 					label="封面图片URL"
-					defaultValue={currentNovel?.cover_image_url || ""}
+					name="cover_image_url"
+					value={formData.cover_image_url}
+					onChange={handleInputChange}
 					placeholder="输入封面图片URL"
 				/>
 
 				<div className="flex justify-end space-x-3 pt-5">
 					<Button
+						type="button"
 						variant="outline"
 						onClick={() => setIsModalOpen(false)}
 						leftIcon={<X size={16} />}
+						disabled={formSubmitting}
 					>
 						取消
 					</Button>
 					<Button
+						type="submit"
 						leftIcon={<Check size={16} />}
-						onClick={() => {
-							// 真实应用中，应该保存小说到Supabase
-							setIsModalOpen(false);
-							fetchNovels();
-						}}
+						disabled={formSubmitting}
 					>
-						{currentNovel ? "更新小说" : "创建小说"}
+						{formSubmitting
+							? "提交中..."
+							: currentNovel
+							? "更新小说"
+							: "创建小说"}
 					</Button>
 				</div>
-			</div>
+			</form>
 		);
 	};
 
