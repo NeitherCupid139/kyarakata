@@ -1,442 +1,523 @@
 import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useWorldSettings, WorldSetting } from "@/hooks";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { GlobeLock, Bookmark, Save, Plus, Trash2 } from "lucide-react";
+import {
+	Search,
+	Plus,
+	Edit,
+	Trash2,
+	X,
+	Check,
+	Book,
+	ArrowLeft,
+} from "lucide-react";
 
-interface WorldSetting {
-	id?: number;
-	world_name: string;
-	era: string;
-	description: string;
-	rules: string;
-	geography: string;
-	cultures: string;
-	magic_system: string;
-	created_at?: string;
-	updated_at?: string;
+// 类型定义
+interface SelectedNovel {
+	id: number;
+	title: string;
 }
 
-function WorldSettings() {
-	const [worlds, setWorlds] = useState<WorldSetting[]>([]);
-	const [selectedWorldId, setSelectedWorldId] = useState<number | null>(null);
-	const [loading, setLoading] = useState(true);
-	const [saving, setSaving] = useState(false);
+interface WorldSettingForm {
+	id: number;
+	novel_id: number;
+	title: string;
+	description: string;
+	rules: string;
+	background: string;
+	history: string;
+	geography: string;
+	culture: string;
+	magic_system: string;
+	technology: string;
+}
 
-	const [currentSetting, setCurrentSetting] = useState<WorldSetting>({
-		world_name: "",
-		era: "",
-		description: "",
-		rules: "",
-		geography: "",
-		cultures: "",
-		magic_system: "",
-	});
+export default function WorldSettings() {
+	const {
+		worldSettings,
+		loading,
+		fetchWorldSettingsByNovelId,
+		createWorldSetting,
+		updateWorldSetting,
+		deleteWorldSetting,
+	} = useWorldSettings();
 
-	const fetchWorlds = async () => {
+	const [selectedNovel, setSelectedNovel] = useState<SelectedNovel | null>(
+		null
+	);
+	const [novels, setNovels] = useState<SelectedNovel[]>([]);
+	const [searchTerm, setSearchTerm] = useState("");
+	const [isModalOpen, setIsModalOpen] = useState(false);
+	const [currentSetting, setCurrentSetting] = useState<WorldSettingForm | null>(
+		null
+	);
+
+	// 从URL获取novel_id
+	const getNovelIdFromUrl = () => {
+		const urlParams = new URLSearchParams(window.location.search);
+		return urlParams.get("novel_id")
+			? parseInt(urlParams.get("novel_id")!)
+			: null;
+	};
+
+	// 获取小说列表
+	const fetchNovels = async () => {
 		try {
-			setLoading(true);
-			const { data, error } = await supabase
-				.from("world_settings")
-				.select("*")
-				.order("created_at", { ascending: false });
+			const { data, error } = await fetch("/api/novels").then((res) =>
+				res.json()
+			);
 
 			if (error) throw error;
+			setNovels(data || []);
 
-			setWorlds(data || []);
-
-			// 如果有世界设定且没有选择任何设定，则选择第一个
-			if (data && data.length > 0 && !selectedWorldId) {
-				setSelectedWorldId(data[0].id);
-				setCurrentSetting({
-					world_name: data[0].world_name,
-					era: data[0].era,
-					description: data[0].description,
-					rules: data[0].rules,
-					geography: data[0].geography,
-					cultures: data[0].cultures,
-					magic_system: data[0].magic_system,
-				});
+			// 如果URL中有novel_id，选中它
+			const novelIdFromUrl = getNovelIdFromUrl();
+			if (novelIdFromUrl && data) {
+				const novelFromUrl = data.find(
+					(novel: SelectedNovel) => novel.id === novelIdFromUrl
+				);
+				if (novelFromUrl) {
+					setSelectedNovel(novelFromUrl);
+				}
 			}
 		} catch (error) {
-			console.error("获取世界设定失败:", error);
+			console.error("获取小说列表失败:", error);
+			// 演示数据
+			const demoNovels = [
+				{ id: 1, title: "三国演义" },
+				{ id: 2, title: "水浒传" },
+				{ id: 3, title: "西游记" },
+			];
+			setNovels(demoNovels);
 
-			// 演示用示例数据
-			const demoWorld = {
-				id: 1,
-				world_name: "三国乱世",
-				era: "东汉末年",
-				description:
-					"东汉末年，天下大乱，群雄并起，三国鼎立，风云变幻，英雄辈出...",
-				rules:
-					"1. 所有角色必须符合历史背景\n2. 角色关系需要符合逻辑\n3. 事件发生需要有时间线",
-				geography: "主要分为魏、蜀、吴三个主要势力范围，北方多平原，南方多丘陵",
-				cultures: "各地文化差异较大，北方尚武，南方重商",
-				magic_system: "无明显超自然力量，主要以谋略和武力为主",
-				created_at: new Date().toISOString(),
-				updated_at: new Date().toISOString(),
-			};
-
-			setWorlds([demoWorld]);
-			setSelectedWorldId(1);
-			setCurrentSetting({
-				world_name: demoWorld.world_name,
-				era: demoWorld.era,
-				description: demoWorld.description,
-				rules: demoWorld.rules,
-				geography: demoWorld.geography,
-				cultures: demoWorld.cultures,
-				magic_system: demoWorld.magic_system,
-			});
-		} finally {
-			setLoading(false);
+			// 演示：选择第一本小说
+			const novelIdFromUrl = getNovelIdFromUrl();
+			if (novelIdFromUrl) {
+				const novelFromUrl = demoNovels.find(
+					(novel) => novel.id === novelIdFromUrl
+				);
+				if (novelFromUrl) {
+					setSelectedNovel(novelFromUrl);
+				}
+			}
 		}
 	};
 
 	useEffect(() => {
-		fetchWorlds();
+		fetchNovels();
 	}, []);
 
-	const handleInputChange = (field: string, value: string) => {
-		setCurrentSetting((prev) => ({
-			...prev,
-			[field]: value,
-		}));
+	useEffect(() => {
+		if (selectedNovel) {
+			fetchWorldSettingsByNovelId(selectedNovel.id);
+		}
+	}, [selectedNovel, fetchWorldSettingsByNovelId]);
+
+	const filteredSettings = worldSettings.filter(
+		(setting) =>
+			setting.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+			setting.description.toLowerCase().includes(searchTerm.toLowerCase())
+	);
+
+	const openEditModal = (setting: WorldSetting) => {
+		setCurrentSetting(setting as WorldSettingForm);
+		setIsModalOpen(true);
 	};
 
-	const handleSave = async () => {
-		if (!currentSetting.world_name) {
-			alert("请输入世界名称");
+	const openCreateModal = () => {
+		if (!selectedNovel) {
+			alert("请先选择一本小说");
 			return;
 		}
 
-		try {
-			setSaving(true);
-
-			if (selectedWorldId) {
-				// 更新现有世界设定
-				const { error } = await supabase
-					.from("world_settings")
-					.update({
-						world_name: currentSetting.world_name,
-						era: currentSetting.era,
-						description: currentSetting.description,
-						rules: currentSetting.rules,
-						geography: currentSetting.geography,
-						cultures: currentSetting.cultures,
-						magic_system: currentSetting.magic_system,
-						updated_at: new Date().toISOString(),
-					})
-					.eq("id", selectedWorldId);
-
-				if (error) throw error;
-
-				alert("世界设定已更新");
-			} else {
-				// 创建新世界设定
-				const { data, error } = await supabase
-					.from("world_settings")
-					.insert({
-						world_name: currentSetting.world_name,
-						era: currentSetting.era,
-						description: currentSetting.description,
-						rules: currentSetting.rules,
-						geography: currentSetting.geography,
-						cultures: currentSetting.cultures,
-						magic_system: currentSetting.magic_system,
-						created_at: new Date().toISOString(),
-						updated_at: new Date().toISOString(),
-					})
-					.select();
-
-				if (error) throw error;
-
-				if (data && data[0]) {
-					setSelectedWorldId(data[0].id);
-				}
-
-				alert("新世界设定已创建");
-			}
-
-			// 刷新世界设定列表
-			fetchWorlds();
-		} catch (error) {
-			console.error("保存世界设定失败:", error);
-			alert("保存失败，请重试");
-		} finally {
-			setSaving(false);
-		}
-	};
-
-	const handleSelectWorld = (id: number) => {
-		const selected = worlds.find((world) => world.id === id);
-		if (selected) {
-			setSelectedWorldId(id);
-			setCurrentSetting({
-				world_name: selected.world_name,
-				era: selected.era,
-				description: selected.description,
-				rules: selected.rules,
-				geography: selected.geography,
-				cultures: selected.cultures,
-				magic_system: selected.magic_system,
-			});
-		}
-	};
-
-	const handleCreateNew = () => {
-		setSelectedWorldId(null);
 		setCurrentSetting({
-			world_name: "",
-			era: "",
+			id: 0,
+			novel_id: selectedNovel.id,
+			title: "",
 			description: "",
 			rules: "",
+			background: "",
+			history: "",
 			geography: "",
-			cultures: "",
+			culture: "",
 			magic_system: "",
+			technology: "",
 		});
+		setIsModalOpen(true);
 	};
 
-	const handleDeleteWorld = async (id: number) => {
-		if (!window.confirm("确定要删除这个世界设定吗？")) {
-			return;
+	const handleDeleteSetting = async (id: number) => {
+		if (window.confirm("确定要删除这个世界观设定吗？")) {
+			try {
+				await deleteWorldSetting(id);
+			} catch (error) {
+				console.error("删除世界观设定失败:", error);
+			}
 		}
+	};
+
+	const handleSaveSetting = async () => {
+		if (!currentSetting) return;
 
 		try {
-			const { error } = await supabase
-				.from("world_settings")
-				.delete()
-				.eq("id", id);
+			const formElement = document.getElementById(
+				"worldSettingForm"
+			) as HTMLFormElement;
+			const formData = new FormData(formElement);
 
-			if (error) throw error;
+			const settingData = {
+				novel_id: currentSetting.novel_id,
+				title: formData.get("title") as string,
+				description: formData.get("description") as string,
+				rules: formData.get("rules") as string,
+				background: formData.get("background") as string,
+				history: formData.get("history") as string,
+				geography: formData.get("geography") as string,
+				culture: formData.get("culture") as string,
+				magic_system: formData.get("magic_system") as string,
+				technology: formData.get("technology") as string,
+			};
 
-			// 如果删除的是当前选中的世界，重置表单
-			if (id === selectedWorldId) {
-				handleCreateNew();
+			if (currentSetting.id === 0) {
+				// 创建新设定
+				await createWorldSetting(settingData);
+			} else {
+				// 更新现有设定
+				await updateWorldSetting(currentSetting.id, settingData);
 			}
 
-			// 刷新世界设定列表
-			fetchWorlds();
+			setIsModalOpen(false);
+			if (selectedNovel) {
+				fetchWorldSettingsByNovelId(selectedNovel.id);
+			}
 		} catch (error) {
-			console.error("删除世界设定失败:", error);
-			alert("删除失败，请重试");
+			console.error("保存世界观设定失败:", error);
+			alert("保存失败，请重试");
 		}
 	};
+
+	// 世界观设定表单组件
+	const SettingForm = () => {
+		return (
+			<form id="worldSettingForm" className="mt-5 space-y-4">
+				<Input
+					label="标题"
+					name="title"
+					defaultValue={currentSetting?.title || ""}
+					placeholder="输入世界观标题"
+				/>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						简介
+					</label>
+					<textarea
+						name="description"
+						rows={2}
+						defaultValue={currentSetting?.description || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入简介"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						世界规则
+					</label>
+					<textarea
+						name="rules"
+						rows={3}
+						defaultValue={currentSetting?.rules || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入世界规则设定"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						世界背景
+					</label>
+					<textarea
+						name="background"
+						rows={3}
+						defaultValue={currentSetting?.background || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入世界背景描述"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						世界历史
+					</label>
+					<textarea
+						name="history"
+						rows={3}
+						defaultValue={currentSetting?.history || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入世界历史"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						地理环境
+					</label>
+					<textarea
+						name="geography"
+						rows={3}
+						defaultValue={currentSetting?.geography || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入地理环境描述"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						文化特点
+					</label>
+					<textarea
+						name="culture"
+						rows={3}
+						defaultValue={currentSetting?.culture || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入文化特点"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						魔法体系
+					</label>
+					<textarea
+						name="magic_system"
+						rows={3}
+						defaultValue={currentSetting?.magic_system || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入魔法体系(如果适用)"
+					></textarea>
+				</div>
+				<div>
+					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+						技术水平
+					</label>
+					<textarea
+						name="technology"
+						rows={3}
+						defaultValue={currentSetting?.technology || ""}
+						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+						placeholder="输入技术水平"
+					></textarea>
+				</div>
+
+				<div className="flex justify-end space-x-3 pt-5">
+					<Button
+						variant="outline"
+						onClick={() => setIsModalOpen(false)}
+						leftIcon={<X size={16} />}
+					>
+						取消
+					</Button>
+					<Button leftIcon={<Check size={16} />} onClick={handleSaveSetting}>
+						{currentSetting?.id ? "更新设定" : "创建设定"}
+					</Button>
+				</div>
+			</form>
+		);
+	};
+
+	// 准备选择器选项
+	const novelOptions = novels.map((novel) => (
+		<option key={novel.id} value={novel.id}>
+			{novel.title}
+		</option>
+	));
 
 	return (
 		<div className="space-y-6">
 			<div className="flex justify-between items-center">
 				<div>
 					<h1 className="text-2xl font-bold text-gray-900 dark:text-white">
-						世界设定
+						世界观设定
 					</h1>
 					<p className="text-gray-500 dark:text-gray-400">
-						定义您的世界观和基本规则
+						{selectedNovel
+							? `管理《${selectedNovel.title}》的世界观设定`
+							: "请选择一本小说来管理其世界观设定"}
 					</p>
 				</div>
 				<div className="flex space-x-2">
 					<Button
 						variant="outline"
-						leftIcon={<Plus size={16} />}
-						onClick={handleCreateNew}
+						leftIcon={<ArrowLeft size={16} />}
+						onClick={() => window.history.back()}
 					>
-						新建设定
+						返回小说列表
 					</Button>
 					<Button
-						leftIcon={<Save size={16} />}
-						onClick={handleSave}
-						disabled={saving}
+						leftIcon={<Plus size={16} />}
+						onClick={openCreateModal}
+						disabled={!selectedNovel}
 					>
-						{saving ? "保存中..." : "保存设定"}
+						添加设定
 					</Button>
 				</div>
 			</div>
 
-			{/* 世界设定选择器 */}
-			{worlds.length > 0 && (
+			{!selectedNovel ? (
 				<Card className="p-4">
-					<h2 className="text-lg font-medium mb-3 text-gray-900 dark:text-white">
-						选择世界设定
-					</h2>
-					<div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-						{worlds.map((world) => (
-							<div
-								key={world.id}
-								className={`p-3 rounded-lg border cursor-pointer relative ${
-									selectedWorldId === world.id
-										? "bg-blue-50 dark:bg-blue-900 border-blue-200 dark:border-blue-700"
-										: "bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700"
-								}`}
-								onClick={() => world.id && handleSelectWorld(world.id)}
-							>
-								<h3 className="font-medium text-gray-900 dark:text-white">
-									{world.world_name}
-								</h3>
-								<p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-									{world.era}
-								</p>
-								{selectedWorldId === world.id && world.id && (
-									<button
-										className="absolute top-2 right-2 text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300"
-										onClick={(e) => {
-											e.stopPropagation();
-											handleDeleteWorld(world.id as number);
-										}}
-									>
-										<Trash2 size={14} />
-									</button>
-								)}
-							</div>
-						))}
+					<div className="mb-4">
+						<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+							选择小说
+						</label>
+						<select
+							className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+							onChange={(e) => {
+								if (e.target.value) {
+									const novelId = parseInt(e.target.value);
+									const novel = novels.find((n) => n.id === novelId);
+									if (novel) {
+										setSelectedNovel(novel);
+									}
+								} else {
+									setSelectedNovel(null);
+								}
+							}}
+							value={
+								selectedNovel
+									? (selectedNovel as unknown as { id: number }).id.toString()
+									: ""
+							}
+						>
+							<option value="">请选择小说</option>
+							{novelOptions}
+						</select>
 					</div>
+				</Card>
+			) : (
+				<Card>
+					<div className="flex justify-between items-center mb-4 p-4">
+						<div className="w-full max-w-xs">
+							<Input
+								placeholder="搜索世界观设定..."
+								leftIcon={<Search className="h-5 w-5 text-gray-400" />}
+								value={searchTerm}
+								onChange={(e) => setSearchTerm(e.target.value)}
+							/>
+						</div>
+						<div className="ml-4">
+							<select
+								className="block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+								onChange={(e) => {
+									if (e.target.value) {
+										const novelId = parseInt(e.target.value);
+										const novel = novels.find((n) => n.id === novelId);
+										if (novel) {
+											setSelectedNovel(novel);
+										}
+									}
+								}}
+								value={selectedNovel.id.toString()}
+							>
+								{novelOptions}
+							</select>
+						</div>
+					</div>
+
+					{loading ? (
+						<div className="text-center py-4">加载世界观设定中...</div>
+					) : (
+						<div className="p-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+							{filteredSettings.length === 0 ? (
+								<div className="col-span-full text-center text-gray-500 dark:text-gray-400 py-8">
+									未找到世界观设定
+								</div>
+							) : (
+								filteredSettings.map((setting) => (
+									<Card key={setting.id} className="overflow-hidden">
+										<div className="p-4 flex flex-col h-full">
+											<div className="flex items-center justify-between">
+												<h3 className="text-lg font-medium text-gray-900 dark:text-white">
+													{setting.title}
+												</h3>
+												<div className="flex space-x-2">
+													<button
+														className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
+														onClick={() => openEditModal(setting)}
+													>
+														<Edit className="h-5 w-5" />
+													</button>
+													<button
+														className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
+														onClick={() => handleDeleteSetting(setting.id)}
+													>
+														<Trash2 className="h-5 w-5" />
+													</button>
+												</div>
+											</div>
+											<p className="mt-2 text-sm text-gray-500 dark:text-gray-400">
+												{setting.description}
+											</p>
+											<div className="mt-4 space-y-2 flex-grow">
+												{setting.rules && (
+													<div>
+														<p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+															世界规则
+														</p>
+														<p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+															{setting.rules}
+														</p>
+													</div>
+												)}
+												{setting.background && (
+													<div>
+														<p className="text-xs font-semibold text-gray-600 dark:text-gray-300">
+															世界背景
+														</p>
+														<p className="text-xs text-gray-500 dark:text-gray-400 line-clamp-2">
+															{setting.background}
+														</p>
+													</div>
+												)}
+											</div>
+											<Button
+												variant="outline"
+												size="sm"
+												leftIcon={<Book size={14} />}
+												className="mt-4 self-end"
+												onClick={() => openEditModal(setting)}
+											>
+												查看详情
+											</Button>
+										</div>
+									</Card>
+								))
+							)}
+						</div>
+					)}
 				</Card>
 			)}
 
-			{loading ? (
-				<div className="text-center py-10">加载世界设定中...</div>
-			) : (
-				<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-					<Card className="p-4">
-						<div className="flex items-center mb-4">
-							<div className="flex-shrink-0 h-10 w-10 bg-blue-100 dark:bg-blue-900 rounded-full flex items-center justify-center">
-								<GlobeLock className="h-6 w-6 text-blue-600 dark:text-blue-300" />
-							</div>
-							<h2 className="ml-4 text-lg font-medium text-gray-900 dark:text-white">
-								基本信息
-							</h2>
+			{/* 世界观设定表单模态框 */}
+			{isModalOpen && (
+				<div className="fixed inset-0 overflow-y-auto z-50">
+					<div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+						<div
+							className="fixed inset-0 transition-opacity"
+							onClick={() => setIsModalOpen(false)}
+						>
+							<div className="absolute inset-0 bg-gray-500 opacity-75"></div>
 						</div>
-
-						<div className="space-y-4">
-							<Input
-								label="世界名称"
-								value={currentSetting.world_name}
-								onChange={(e) =>
-									handleInputChange("world_name", e.target.value)
-								}
-								required
-							/>
-							<Input
-								label="时代背景"
-								value={currentSetting.era}
-								onChange={(e) => handleInputChange("era", e.target.value)}
-							/>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									世界描述
-								</label>
-								<textarea
-									rows={4}
-									value={currentSetting.description}
-									onChange={(e) =>
-										handleInputChange("description", e.target.value)
-									}
-									className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-									placeholder="描述您的世界背景"
-								></textarea>
+						<span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
+						<div
+							className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-3xl sm:w-full"
+							onClick={(e) => e.stopPropagation()}
+						>
+							<div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4 max-h-[90vh] overflow-y-auto">
+								<h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+									{currentSetting?.id ? "编辑世界观设定" : "创建新世界观设定"}
+								</h3>
+								<SettingForm />
 							</div>
 						</div>
-					</Card>
-
-					<Card className="p-4">
-						<div className="flex items-center mb-4">
-							<div className="flex-shrink-0 h-10 w-10 bg-green-100 dark:bg-green-900 rounded-full flex items-center justify-center">
-								<Bookmark className="h-6 w-6 text-green-600 dark:text-green-300" />
-							</div>
-							<h2 className="ml-4 text-lg font-medium text-gray-900 dark:text-white">
-								规则与设定
-							</h2>
-						</div>
-
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									世界规则
-								</label>
-								<textarea
-									rows={3}
-									value={currentSetting.rules}
-									onChange={(e) => handleInputChange("rules", e.target.value)}
-									className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-									placeholder="定义角色和事件的基本规则"
-								></textarea>
-							</div>
-						</div>
-					</Card>
-
-					<Card className="p-4">
-						<div className="flex items-center mb-4">
-							<div className="flex-shrink-0 h-10 w-10 bg-purple-100 dark:bg-purple-900 rounded-full flex items-center justify-center">
-								<GlobeLock className="h-6 w-6 text-purple-600 dark:text-purple-300" />
-							</div>
-							<h2 className="ml-4 text-lg font-medium text-gray-900 dark:text-white">
-								地理与文化
-							</h2>
-						</div>
-
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									地理环境
-								</label>
-								<textarea
-									rows={3}
-									value={currentSetting.geography}
-									onChange={(e) =>
-										handleInputChange("geography", e.target.value)
-									}
-									className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-									placeholder="描述世界的地理环境"
-								></textarea>
-							</div>
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									文化风俗
-								</label>
-								<textarea
-									rows={3}
-									value={currentSetting.cultures}
-									onChange={(e) =>
-										handleInputChange("cultures", e.target.value)
-									}
-									className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-									placeholder="描述不同地区的文化特点"
-								></textarea>
-							</div>
-						</div>
-					</Card>
-
-					<Card className="p-4">
-						<div className="flex items-center mb-4">
-							<div className="flex-shrink-0 h-10 w-10 bg-red-100 dark:bg-red-900 rounded-full flex items-center justify-center">
-								<Bookmark className="h-6 w-6 text-red-600 dark:text-red-300" />
-							</div>
-							<h2 className="ml-4 text-lg font-medium text-gray-900 dark:text-white">
-								特殊设定
-							</h2>
-						</div>
-
-						<div className="space-y-4">
-							<div>
-								<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-									超自然/魔法系统
-								</label>
-								<textarea
-									rows={3}
-									value={currentSetting.magic_system}
-									onChange={(e) =>
-										handleInputChange("magic_system", e.target.value)
-									}
-									className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-									placeholder="描述是否存在超自然力量和规则"
-								></textarea>
-							</div>
-						</div>
-					</Card>
+					</div>
 				</div>
 			)}
 		</div>
 	);
 }
-
-export default WorldSettings;

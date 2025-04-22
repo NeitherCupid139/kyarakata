@@ -1,19 +1,10 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import {
-	Search,
-	Plus,
-	Edit,
-	Trash2,
-	X,
-	Check,
-	BookText,
-	ArrowLeft,
-} from "lucide-react";
-import ChapterReview from "@/components/ChapterReview";
+import { Search, Plus, Edit, Trash2, BookText, ArrowLeft } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 // 明确定义类型
 interface ChapterData {
@@ -42,12 +33,7 @@ export default function Chapters() {
 	const [selectedNovel, setSelectedNovel] = useState<NovelData | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [searchTerm, setSearchTerm] = useState("");
-	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [currentChapter, setCurrentChapter] = useState<ChapterData | null>(
-		null
-	);
-	const [showReview, setShowReview] = useState(false);
-	const contentRef = useRef<HTMLTextAreaElement>(null);
+	const navigate = useNavigate();
 
 	// 从URL获取novel_id (在实际应用中使用路由参数)
 	const getNovelIdFromUrl = () => {
@@ -219,9 +205,8 @@ export default function Chapters() {
 	);
 
 	const openEditModal = (chapter: ChapterData) => {
-		setCurrentChapter(chapter);
-		setIsModalOpen(true);
-		setShowReview(false);
+		// 导航到单独的编辑器页面
+		navigate(`/chapter-editor/${selectedNovel?.id}/${chapter.id}`);
 	};
 
 	const openCreateModal = () => {
@@ -230,22 +215,8 @@ export default function Chapters() {
 			return;
 		}
 
-		const nextChapterNumber =
-			chapters.length > 0
-				? Math.max(...chapters.map((c) => c.chapter_number)) + 1
-				: 1;
-
-		setCurrentChapter({
-			id: 0,
-			novel_id: selectedNovel.id,
-			title: "",
-			content: "",
-			chapter_number: nextChapterNumber,
-			created_at: new Date().toISOString(),
-			updated_at: new Date().toISOString(),
-		});
-		setIsModalOpen(true);
-		setShowReview(false);
+		// 导航到新增章节的编辑器页面
+		navigate(`/chapter-editor/${selectedNovel.id}/new`);
 	};
 
 	const handleDeleteChapter = async (id: number) => {
@@ -260,144 +231,6 @@ export default function Chapters() {
 				console.error("删除章节失败:", error);
 			}
 		}
-	};
-
-	const handleStartReview = () => {
-		if (!contentRef.current?.value) {
-			alert("请先输入章节内容再进行审核");
-			return;
-		}
-
-		// 更新当前章节的内容
-		if (currentChapter) {
-			setCurrentChapter({
-				...currentChapter,
-				title:
-					document.querySelector<HTMLInputElement>(
-						'input[placeholder="输入章节标题"]'
-					)?.value || "",
-				chapter_number: parseInt(
-					document.querySelector<HTMLInputElement>(
-						'input[placeholder="输入章节编号"]'
-					)?.value || "1"
-				),
-				content: contentRef.current.value,
-			});
-		}
-
-		setShowReview(true);
-	};
-
-	const handleReviewComplete = (approved: boolean, feedback: string) => {
-		if (approved) {
-			// 在真实应用中，这里会保存章节到数据库
-			setIsModalOpen(false);
-			fetchChapters(); // 重新获取章节列表
-			alert("章节已审核通过并发布");
-		} else {
-			// 返回编辑状态，显示反馈
-			setShowReview(false);
-			alert(`章节审核未通过: ${feedback}`);
-		}
-	};
-
-	const handleSaveChapter = async () => {
-		if (!currentChapter || !contentRef.current) return;
-
-		try {
-			const chapterData = {
-				novel_id: currentChapter.novel_id,
-				title:
-					document.querySelector<HTMLInputElement>(
-						'input[placeholder="输入章节标题"]'
-					)?.value || "",
-				chapter_number: parseInt(
-					document.querySelector<HTMLInputElement>(
-						'input[placeholder="输入章节编号"]'
-					)?.value || "1"
-				),
-				content: contentRef.current.value,
-				updated_at: new Date().toISOString(),
-			};
-
-			if (currentChapter.id === 0) {
-				// 创建新章节
-				const { data, error } = await supabase
-					.from("chapters")
-					.insert([{ ...chapterData, created_at: new Date().toISOString() }])
-					.select();
-
-				if (error) throw error;
-				console.log("章节创建成功:", data);
-			} else {
-				// 更新现有章节
-				const { data, error } = await supabase
-					.from("chapters")
-					.update(chapterData)
-					.eq("id", currentChapter.id)
-					.select();
-
-				if (error) throw error;
-				console.log("章节更新成功:", data);
-			}
-
-			setIsModalOpen(false);
-			fetchChapters(); // 重新获取章节列表
-		} catch (error) {
-			console.error("保存章节失败:", error);
-			alert("保存章节失败，请重试");
-		}
-	};
-
-	// 章节表单组件
-	const ChapterForm = () => {
-		return (
-			<div className="mt-5 space-y-4">
-				<Input
-					label="章节标题"
-					defaultValue={currentChapter?.title || ""}
-					placeholder="输入章节标题"
-				/>
-				<Input
-					label="章节编号"
-					type="number"
-					defaultValue={currentChapter?.chapter_number.toString() || "1"}
-					placeholder="输入章节编号"
-				/>
-				<div>
-					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-						章节内容
-					</label>
-					<textarea
-						ref={contentRef}
-						rows={10}
-						defaultValue={currentChapter?.content || ""}
-						className="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-gray-500 focus:border-gray-500 sm:text-sm dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-						placeholder="输入章节内容"
-					></textarea>
-				</div>
-
-				<div className="flex justify-end space-x-3 pt-5">
-					<Button
-						variant="outline"
-						onClick={() => setIsModalOpen(false)}
-						leftIcon={<X size={16} />}
-					>
-						取消
-					</Button>
-					<Button
-						variant="outline"
-						onClick={handleStartReview}
-						className="text-blue-500"
-					>
-						审核内容
-					</Button>
-					<Button leftIcon={<Check size={16} />} onClick={handleSaveChapter}>
-						{currentChapter?.id ? "更新章节" : "创建章节"}
-					</Button>
-				</div>
-			</div>
-		);
 	};
 
 	// 准备选择器选项
@@ -539,7 +372,11 @@ export default function Chapters() {
 										</tr>
 									) : (
 										filteredChapters.map((chapter) => (
-											<tr key={chapter.id}>
+											<tr
+												key={chapter.id}
+												className="hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer transition-colors duration-150"
+												onClick={() => openEditModal(chapter)}
+											>
 												<td className="px-6 py-4">
 													<div className="flex items-center">
 														<div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
@@ -566,13 +403,19 @@ export default function Chapters() {
 												<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2 flex justify-end">
 													<button
 														className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white"
-														onClick={() => openEditModal(chapter)}
+														onClick={(e) => {
+															e.stopPropagation();
+															openEditModal(chapter);
+														}}
 													>
 														<Edit className="h-5 w-5" />
 													</button>
 													<button
 														className="text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-300"
-														onClick={() => handleDeleteChapter(chapter.id)}
+														onClick={(e) => {
+															e.stopPropagation();
+															handleDeleteChapter(chapter.id);
+														}}
 													>
 														<Trash2 className="h-5 w-5" />
 													</button>
@@ -585,40 +428,6 @@ export default function Chapters() {
 						</div>
 					)}
 				</Card>
-			)}
-
-			{/* 章节表单模态框 */}
-			{isModalOpen && (
-				<div className="fixed inset-0 overflow-y-auto z-50">
-					<div className="flex items-center justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
-						<div
-							className="fixed inset-0 transition-opacity"
-							onClick={() => setIsModalOpen(false)}
-						>
-							<div className="absolute inset-0 bg-gray-500 opacity-75"></div>
-						</div>
-						<span className="hidden sm:inline-block sm:align-middle sm:h-screen"></span>
-						<div
-							className="inline-block align-bottom bg-white dark:bg-gray-800 rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full"
-							onClick={(e) => e.stopPropagation()}
-						>
-							<div className="bg-white dark:bg-gray-800 px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-								<h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
-									{currentChapter?.id ? "编辑章节" : "创建新章节"}
-								</h3>
-
-								{showReview && currentChapter ? (
-									<ChapterReview
-										chapterContent={currentChapter.content}
-										onReviewComplete={handleReviewComplete}
-									/>
-								) : (
-									<ChapterForm />
-								)}
-							</div>
-						</div>
-					</div>
-				</div>
 			)}
 		</div>
 	);

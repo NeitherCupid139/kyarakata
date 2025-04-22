@@ -6,6 +6,9 @@ interface RetroEffectsProps {
 	enableNoise?: boolean;
 	enableGrid?: boolean;
 	bootSequence?: boolean;
+	enableGlitch?: boolean;
+	enableScanlines?: boolean;
+	enableFlicker?: boolean;
 }
 
 const RetroEffects: React.FC<RetroEffectsProps> = ({
@@ -13,9 +16,13 @@ const RetroEffects: React.FC<RetroEffectsProps> = ({
 	enableNoise = true,
 	enableGrid = false,
 	bootSequence = false,
+	enableGlitch = false,
+	enableScanlines = true,
+	enableFlicker = false,
 }) => {
 	const { enabled: crtEnabled } = useCrtEffectStore();
 	const [isBooted, setIsBooted] = useState(!bootSequence);
+	const [glitchActive, setGlitchActive] = useState(false);
 
 	useEffect(() => {
 		if (bootSequence) {
@@ -27,9 +34,33 @@ const RetroEffects: React.FC<RetroEffectsProps> = ({
 		}
 	}, [bootSequence]);
 
+	useEffect(() => {
+		if (!enableGlitch || !crtEnabled) return;
+
+		// 随机触发故障效果
+		const glitchInterval = setInterval(() => {
+			if (Math.random() > 0.9) {
+				setGlitchActive(true);
+
+				// 短暂显示故障效果后恢复
+				setTimeout(() => {
+					setGlitchActive(false);
+				}, 150);
+			}
+		}, 2000);
+
+		return () => clearInterval(glitchInterval);
+	}, [enableGlitch, crtEnabled]);
+
 	return (
 		<div
-			className={`relative ${bootSequence && !isBooted ? "boot-sequence" : ""}`}
+			className={`
+				relative 
+				${bootSequence && !isBooted ? "boot-sequence" : ""} 
+				${enableScanlines && crtEnabled ? "crt-effect" : ""}
+				${enableFlicker && crtEnabled ? "screen-flicker" : ""}
+				${glitchActive ? "retro-glitch" : ""}
+			`}
 		>
 			{/* 噪点效果 */}
 			{enableNoise && crtEnabled && <div className="noise" />}

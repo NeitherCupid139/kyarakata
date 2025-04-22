@@ -1,5 +1,5 @@
-import { useState, useEffect, FormEvent } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect, useRef, FormEvent } from "react";
+import { useNovels, Novel, CreateNovelData } from "@/hooks/useNovels";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -12,140 +12,74 @@ import {
 	Check,
 	BookOpen,
 	Bookmark,
+	Upload,
+	Image,
 } from "lucide-react";
-
-interface NovelData {
-	id: number;
-	title: string;
-	author: string;
-	description: string;
-	cover_image_url: string;
-	created_at: string;
-	updated_at: string;
-	chapter_count?: number;
-}
 
 interface NovelFormData {
 	title: string;
 	author: string;
 	description: string;
-	cover_image_url: string;
 }
 
 function Novels() {
-	const [novels, setNovels] = useState<NovelData[]>([]);
-	const [loading, setLoading] = useState(true);
+	const {
+		loading,
+		novels: novelList,
+		fetchNovels,
+		createNovel,
+		updateNovel,
+		deleteNovel,
+		uploadCover,
+		uploadProgress,
+	} = useNovels();
+
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [currentNovel, setCurrentNovel] = useState<NovelData | null>(null);
+	const [currentNovel, setCurrentNovel] = useState<Novel | null>(null);
 	const [formSubmitting, setFormSubmitting] = useState(false);
-
-	const fetchNovels = async () => {
-		try {
-			setLoading(true);
-			// 获取小说数据
-			const { data: novelsData, error: novelsError } = await supabase
-				.from("novels")
-				.select("*")
-				.order("created_at", { ascending: false });
-
-			if (novelsError) {
-				throw novelsError;
-			}
-
-			// 获取每本小说的章节数量
-			if (novelsData) {
-				const novelsWithChapterCount = await Promise.all(
-					novelsData.map(async (novel) => {
-						const { count } = await supabase
-							.from("chapters")
-							.select("id", { count: "exact", head: true })
-							.eq("novel_id", novel.id);
-
-						return {
-							...novel,
-							chapter_count: count || 0,
-						};
-					})
-				);
-
-				setNovels(novelsWithChapterCount);
-			}
-		} catch (error) {
-			console.error("获取小说数据失败:", error);
-
-			// 演示用示例数据
-			setNovels([
-				{
-					id: 1,
-					title: "三国演义",
-					author: "罗贯中",
-					description: "记载了从东汉末年到西晋初年之间近百年的历史风云",
-					cover_image_url: "https://example.com/sanguo.jpg",
-					created_at: "2023-01-01T00:00:00Z",
-					updated_at: "2023-01-01T00:00:00Z",
-					chapter_count: 120,
-				},
-				{
-					id: 2,
-					title: "水浒传",
-					author: "施耐庵",
-					description: "以宋江领导的农民起义为题材，描写了梁山好汉的英雄故事",
-					cover_image_url: "https://example.com/shuihu.jpg",
-					created_at: "2023-02-15T00:00:00Z",
-					updated_at: "2023-02-15T00:00:00Z",
-					chapter_count: 100,
-				},
-				{
-					id: 3,
-					title: "西游记",
-					author: "吴承恩",
-					description: "讲述了唐僧师徒四人西天取经，历经九九八十一难的故事",
-					cover_image_url: "https://example.com/xiyou.jpg",
-					created_at: "2023-03-20T00:00:00Z",
-					updated_at: "2023-03-20T00:00:00Z",
-					chapter_count: 86,
-				},
-			]);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const [coverPreview, setCoverPreview] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		fetchNovels();
 	}, []);
 
-	const filteredNovels = novels.filter(
+	const filteredNovels = novelList.filter(
 		(novel) =>
 			novel.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			novel.author.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			novel.description.toLowerCase().includes(searchTerm.toLowerCase())
+			(novel.author || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+			(novel.description || "").toLowerCase().includes(searchTerm.toLowerCase())
 	);
 
-	const openEditModal = (novel: NovelData) => {
+	const openEditModal = (novel: Novel) => {
 		setCurrentNovel(novel);
+		setCoverPreview(novel.cover_image_url);
 		setIsModalOpen(true);
 	};
 
 	const openCreateModal = () => {
 		setCurrentNovel(null);
+		setCoverPreview(null);
 		setIsModalOpen(true);
 	};
 
 	const handleDeleteNovel = async (id: number) => {
 		if (window.confirm("确定要删除这本小说吗？这将同时删除所有相关章节！")) {
-			try {
-				// 真实应用中应该从Supabase删除小说及其章节
-				// const { error: chaptersError } = await supabase.from('chapters').delete().eq('novel_id', id);
-				// const { error: novelError } = await supabase.from('novels').delete().eq('id', id);
-
-				// 演示目的，仅从状态中过滤掉该小说
-				setNovels(novels.filter((novel) => novel.id !== id));
-			} catch (error) {
-				console.error("删除小说失败:", error);
-			}
+			await deleteNovel(id);
 		}
+	};
+
+	const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		// 本地预览
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			setCoverPreview(e.target?.result as string);
+		};
+		reader.readAsDataURL(file);
 	};
 
 	// 小说表单组件
@@ -154,7 +88,6 @@ function Novels() {
 			title: currentNovel?.title || "",
 			author: currentNovel?.author || "",
 			description: currentNovel?.description || "",
-			cover_image_url: currentNovel?.cover_image_url || "",
 		});
 
 		const handleInputChange = (
@@ -169,43 +102,55 @@ function Novels() {
 
 		const handleSubmit = async (e: FormEvent) => {
 			e.preventDefault();
-			if (!formData.title || !formData.author) {
-				alert("标题和作者为必填项");
+			if (!formData.title) {
+				alert("标题为必填项");
 				return;
 			}
 
 			setFormSubmitting(true);
 			try {
-				if (currentNovel) {
-					// 更新小说
-					const { error } = await supabase
-						.from("novels")
-						.update({
-							title: formData.title,
-							author: formData.author,
-							description: formData.description,
-							cover_image_url: formData.cover_image_url,
-							updated_at: new Date().toISOString(),
-						})
-						.eq("id", currentNovel.id);
+				const file = fileInputRef.current?.files?.[0];
 
-					if (error) throw error;
+				if (currentNovel) {
+					// 更新现有小说
+					if (file) {
+						// 如果有新封面
+						const coverUrl = await uploadCover(file, currentNovel.id);
+						if (coverUrl) {
+							await updateNovel(currentNovel.id, {
+								title: formData.title,
+								author: formData.author || undefined,
+								description: formData.description || undefined,
+								cover_image_url: coverUrl,
+							});
+						}
+					} else {
+						// 没有新封面，保留原有封面
+						await updateNovel(currentNovel.id, {
+							title: formData.title,
+							author: formData.author || undefined,
+							description: formData.description || undefined,
+						});
+					}
 				} else {
 					// 创建新小说
-					const { error } = await supabase.from("novels").insert({
+					const newNovelData: CreateNovelData = {
 						title: formData.title,
-						author: formData.author,
-						description: formData.description,
-						cover_image_url: formData.cover_image_url,
-						created_at: new Date().toISOString(),
-						updated_at: new Date().toISOString(),
-					});
+						author: formData.author || undefined,
+						description: formData.description || undefined,
+					};
 
-					if (error) throw error;
+					const newNovel = await createNovel(newNovelData);
+
+					// 如果有封面且成功创建了小说，上传封面
+					if (file && newNovel) {
+						const coverUrl = await uploadCover(file, newNovel.id);
+						if (coverUrl) {
+							await updateNovel(newNovel.id, { cover_image_url: coverUrl });
+						}
+					}
 				}
 
-				// 刷新小说列表
-				await fetchNovels();
 				setIsModalOpen(false);
 			} catch (error) {
 				console.error(currentNovel ? "更新小说失败:" : "创建小说失败:", error);
@@ -217,6 +162,54 @@ function Novels() {
 
 		return (
 			<form onSubmit={handleSubmit} className="mt-5 space-y-4">
+				{/* 封面上传区域 */}
+				<div className="flex flex-col items-center space-y-2">
+					<div className="w-32 h-44 bg-gray-200 dark:bg-gray-700 rounded-md flex items-center justify-center overflow-hidden relative">
+						{coverPreview ? (
+							<img
+								src={coverPreview}
+								alt="小说封面"
+								className="w-full h-full object-cover"
+								onError={(e) => {
+									(e.target as HTMLImageElement).onerror = null;
+									(e.target as HTMLImageElement).src =
+										"data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiIGNsYXNzPSJsdWNpZGUgbHVjaWRlLWJvb2siPjxwYXRoIGQ9Ik00IDMwaDQiLz48cGF0aCBkPSJNNC4wMyAxOS4wM0E5IDkgMCAxIDEgMTUuMDMgOC4wMyIvPjxwYXRoIGQ9Ik0xMiA4YTQ0IDI1cyAwIDgtMTAgOGgxMGMtNC4zIDAtOC0zLTgtOFoiLz48cGF0aCBkPSJNMyAzYTEgMSAwIDAgMSAxLTFoMTYhMTBBMSAxIDAgMCAxIDMgMyIvPjwvc3ZnPg==";
+								}}
+							/>
+						) : (
+							<Image className="h-10 w-10 text-gray-500 dark:text-gray-300" />
+						)}
+						<div
+							className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<Upload className="h-8 w-8 text-white" />
+						</div>
+					</div>
+					<input
+						type="file"
+						ref={fileInputRef}
+						accept="image/*"
+						className="hidden"
+						onChange={handleCoverChange}
+					/>
+					<button
+						type="button"
+						onClick={() => fileInputRef.current?.click()}
+						className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+					>
+						上传封面
+					</button>
+					{uploadProgress > 0 && uploadProgress < 100 && (
+						<div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+							<div
+								className="bg-blue-600 h-2.5 rounded-full"
+								style={{ width: `${uploadProgress}%` }}
+							></div>
+						</div>
+					)}
+				</div>
+
 				<Input
 					label="小说标题"
 					name="title"
@@ -231,7 +224,6 @@ function Novels() {
 					value={formData.author}
 					onChange={handleInputChange}
 					placeholder="输入作者姓名"
-					required
 				/>
 				<div>
 					<label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
@@ -246,13 +238,6 @@ function Novels() {
 						placeholder="输入小说简介"
 					></textarea>
 				</div>
-				<Input
-					label="封面图片URL"
-					name="cover_image_url"
-					value={formData.cover_image_url}
-					onChange={handleInputChange}
-					placeholder="输入封面图片URL"
-				/>
 
 				<div className="flex justify-end space-x-3 pt-5">
 					<Button
@@ -312,7 +297,7 @@ function Novels() {
 					</div>
 				</div>
 
-				{loading ? (
+				{loading && novelList.length === 0 ? (
 					<div className="text-center py-4">加载小说中...</div>
 				) : (
 					<div className="overflow-x-auto">
@@ -335,12 +320,6 @@ function Novels() {
 										scope="col"
 										className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
 									>
-										章节数
-									</th>
-									<th
-										scope="col"
-										className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider"
-									>
 										创建时间
 									</th>
 									<th
@@ -355,7 +334,7 @@ function Novels() {
 								{filteredNovels.length === 0 ? (
 									<tr>
 										<td
-											colSpan={5}
+											colSpan={4}
 											className="px-6 py-4 text-center text-sm text-gray-500 dark:text-gray-400"
 										>
 											未找到小说
@@ -398,10 +377,9 @@ function Novels() {
 												{novel.author}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-												{novel.chapter_count || 0}
-											</td>
-											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-												{new Date(novel.created_at).toLocaleDateString()}
+												{novel.created_at instanceof Date
+													? novel.created_at.toLocaleDateString()
+													: new Date(novel.created_at).toLocaleDateString()}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2 flex justify-end">
 												<button

@@ -23,10 +23,13 @@ import CrtEffectProvider from "./components/ui/CrtEffectProvider";
 import RetroEffects from "./components/ui/RetroEffects";
 import Chapters from "./pages/Chapters";
 import Novels from "./pages/Novels";
-import WorldSettings from "./pages/WorldSettings";
+
 import Characters from "./pages/Characters";
 import Relationships from "./pages/Relationships";
 import Events from "./pages/Events";
+import WorldSettings from "./pages/WorldSettings";
+import Timelines from "./pages/Timelines";
+import ChapterEditor from "./pages/ChapterEditor";
 
 // Route guard component
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -72,11 +75,16 @@ function App() {
 							<Route index element={<Dashboard />} />
 
 							<Route path="chapters" element={<Chapters />} />
+							<Route
+								path="chapter-editor/:novelId/:chapterId"
+								element={<ChapterEditor />}
+							/>
 							<Route path="novels" element={<Novels />} />
-							<Route path="world-settings" element={<WorldSettings />} />
 							<Route path="characters" element={<Characters />} />
 							<Route path="relationships" element={<Relationships />} />
 							<Route path="events" element={<Events />} />
+							<Route path="world-settings" element={<WorldSettings />} />
+							<Route path="timelines" element={<Timelines />} />
 							<Route path="settings" element={<Settings />} />
 						</Route>
 

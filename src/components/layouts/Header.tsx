@@ -4,15 +4,6 @@ import { useAuthStore } from "@/store/authStore";
 import CrtEffectToggle from "@/components/ui/CrtEffectToggle";
 import { cn } from "@/lib/utils";
 
-// ASCII艺术图标
-const ASCII_ICONS = {
-	menu: "≡≡≡",
-	sun: "☼",
-	moon: "☾",
-	bell: "♫",
-	crt: "◎",
-};
-
 interface HeaderProps {
 	setSidebarOpen: (open: boolean) => void;
 }
@@ -95,9 +86,6 @@ function Header({ setSidebarOpen }: HeaderProps) {
 			>
 				<span className="sr-only">Open sidebar</span>
 				<div className="relative">
-					<span className="absolute -top-3 -left-1 text-xs font-mono opacity-70 group-hover:text-cyan-300">
-						{ASCII_ICONS.menu}
-					</span>
 					<Menu
 						className="h-6 w-6 group-hover:animate-pulse"
 						aria-hidden="true"
@@ -138,9 +126,6 @@ function Header({ setSidebarOpen }: HeaderProps) {
 						)}
 						onClick={() => handleButtonClick("crt")}
 					>
-						<span className="absolute -top-3 -right-1 text-xs font-mono opacity-70 group-hover:text-cyan-300">
-							{ASCII_ICONS.crt}
-						</span>
 						<CrtEffectToggle className="border border-dashed border-cyan-500/50 hover:border-cyan-400 p-1 bg-black hover:bg-cyan-900/20 transition-all duration-150" />
 						<div className="absolute inset-0 w-full h-full pointer-events-none opacity-0 group-hover:opacity-100 bg-gradient-to-r from-transparent via-cyan-500/20 to-transparent animate-scanline"></div>
 					</div>
@@ -155,9 +140,7 @@ function Header({ setSidebarOpen }: HeaderProps) {
 						)}
 					>
 						<span className="sr-only">Toggle dark mode</span>
-						<span className="absolute -top-3 -right-1 text-xs font-mono opacity-70 group-hover:text-cyan-300">
-							{isDarkMode ? ASCII_ICONS.sun : ASCII_ICONS.moon}
-						</span>
+
 						{isDarkMode ? (
 							<Sun
 								className="h-6 w-6 text-yellow-400 group-hover:animate-pulse"
@@ -182,9 +165,7 @@ function Header({ setSidebarOpen }: HeaderProps) {
 						)}
 					>
 						<span className="sr-only">View notifications</span>
-						<span className="absolute -top-3 -right-1 text-xs font-mono opacity-70 group-hover:text-cyan-300">
-							{ASCII_ICONS.bell}
-						</span>
+
 						<Bell
 							className="h-6 w-6 text-cyan-400 group-hover:animate-pulse"
 							aria-hidden="true"

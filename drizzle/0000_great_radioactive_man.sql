@@ -32,6 +32,7 @@ CREATE TABLE "characters" (
 	"age" integer,
 	"background" text,
 	"personality" text,
+	"avatar_url" varchar(255),
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -51,6 +52,25 @@ CREATE TABLE "novels" (
 	"author" varchar(100),
 	"description" text,
 	"cover_image_url" varchar(255),
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "timeline_events" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"timeline_id" integer,
+	"event_id" integer,
+	"node_id" varchar(100),
+	"created_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
+CREATE TABLE "timelines" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"novel_id" integer,
+	"title" varchar(255),
+	"description" text,
+	"nodes" json,
+	"edges" json,
 	"created_at" timestamp DEFAULT now(),
 	"updated_at" timestamp DEFAULT now()
 );
@@ -75,10 +95,30 @@ CREATE TABLE "users" (
 	CONSTRAINT "users_email_unique" UNIQUE("email")
 );
 --> statement-breakpoint
+CREATE TABLE "world_settings" (
+	"id" serial PRIMARY KEY NOT NULL,
+	"novel_id" integer,
+	"title" varchar(255),
+	"description" text,
+	"rules" text,
+	"background" text,
+	"history" text,
+	"geography" text,
+	"culture" text,
+	"magic_system" text,
+	"technology" text,
+	"created_at" timestamp DEFAULT now(),
+	"updated_at" timestamp DEFAULT now()
+);
+--> statement-breakpoint
 ALTER TABLE "chapters" ADD CONSTRAINT "chapters_novel_id_novels_id_fk" FOREIGN KEY ("novel_id") REFERENCES "public"."novels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_event_relations" ADD CONSTRAINT "character_event_relations_character_id_characters_id_fk" FOREIGN KEY ("character_id") REFERENCES "public"."characters"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_event_relations" ADD CONSTRAINT "character_event_relations_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_relationships" ADD CONSTRAINT "character_relationships_character1_id_characters_id_fk" FOREIGN KEY ("character1_id") REFERENCES "public"."characters"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "character_relationships" ADD CONSTRAINT "character_relationships_character2_id_characters_id_fk" FOREIGN KEY ("character2_id") REFERENCES "public"."characters"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "timeline_events" ADD CONSTRAINT "timeline_events_timeline_id_timelines_id_fk" FOREIGN KEY ("timeline_id") REFERENCES "public"."timelines"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "timeline_events" ADD CONSTRAINT "timeline_events_event_id_events_id_fk" FOREIGN KEY ("event_id") REFERENCES "public"."events"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "timelines" ADD CONSTRAINT "timelines_novel_id_novels_id_fk" FOREIGN KEY ("novel_id") REFERENCES "public"."novels"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "user_character_relations" ADD CONSTRAINT "user_character_relations_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "user_character_relations" ADD CONSTRAINT "user_character_relations_character_id_characters_id_fk" FOREIGN KEY ("character_id") REFERENCES "public"."characters"("id") ON DELETE no action ON UPDATE no action;
+ALTER TABLE "user_character_relations" ADD CONSTRAINT "user_character_relations_character_id_characters_id_fk" FOREIGN KEY ("character_id") REFERENCES "public"."characters"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "world_settings" ADD CONSTRAINT "world_settings_novel_id_novels_id_fk" FOREIGN KEY ("novel_id") REFERENCES "public"."novels"("id") ON DELETE no action ON UPDATE no action;

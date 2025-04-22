@@ -69,6 +69,17 @@ const NotFound = () => {
 		return () => clearInterval(glitchInterval);
 	}, [isPoweringOn]);
 
+	// 隐藏滚动条的样式
+	useEffect(() => {
+		// 添加全局样式来隐藏滚动条
+		document.body.style.overflow = "hidden";
+
+		// 清理函数
+		return () => {
+			document.body.style.overflow = "";
+		};
+	}, []);
+
 	// 按钮点击效果
 	const handleButtonClick = () => {
 		setShowButton(false);
@@ -99,7 +110,7 @@ const NotFound = () => {
 			<div className="fixed inset-0 pointer-events-none animate-oldCRT"></div>
 
 			<div
-				className="border-2 border-green-crt p-8 max-w-2xl w-full relative animate-vhsTracking"
+				className="border-2 border-green-crt p-8 max-w-2xl w-full relative animate-vhsTracking overflow-hidden"
 				style={{
 					boxShadow:
 						"0 0 15px rgba(0, 255, 0, 0.5), inset 0 0 15px rgba(0, 255, 0, 0.3)",
@@ -128,7 +139,7 @@ const NotFound = () => {
 					</div>
 				</div>
 
-				<pre className="text-center text-xs sm:text-sm md:text-base overflow-x-auto whitespace-pre hologram-text">
+				<pre className="text-center text-xs sm:text-sm md:text-base whitespace-pre hologram-text overflow-hidden">
 					{ascii404}
 				</pre>
 

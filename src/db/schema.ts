@@ -6,6 +6,7 @@ import {
 	boolean,
 	integer,
 	text,
+	json,
 } from "drizzle-orm/pg-core";
 
 // 用户表
@@ -27,6 +28,7 @@ export const characters = pgTable("characters", {
 	age: integer("age"), // 年龄
 	background: text("background"), // 背景故事
 	personality: text("personality"), // 个性描述
+	avatar_url: varchar("avatar_url", { length: 255 }), // 角色头像URL
 	created_at: timestamp("created_at").defaultNow(),
 	updated_at: timestamp("updated_at").defaultNow(),
 });
@@ -89,4 +91,42 @@ export const chapters = pgTable("chapters", {
 	chapter_number: integer("chapter_number"), // 章节编号（如第1章）
 	created_at: timestamp("created_at").defaultNow(),
 	updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 新增：世界观设定表
+export const worldSettings = pgTable("world_settings", {
+	id: serial("id").primaryKey(),
+	novel_id: integer("novel_id").references(() => novels.id), // 关联小说
+	title: varchar("title", { length: 255 }), // 世界观标题
+	description: text("description"), // 世界观详细描述
+	rules: text("rules"), // 世界规则设定
+	background: text("background"), // 世界背景描述
+	history: text("history"), // 世界历史
+	geography: text("geography"), // 地理环境
+	culture: text("culture"), // 文化特点
+	magic_system: text("magic_system"), // 魔法体系(如果适用)
+	technology: text("technology"), // 技术水平
+	created_at: timestamp("created_at").defaultNow(),
+	updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 新增：时间线表
+export const timelines = pgTable("timelines", {
+	id: serial("id").primaryKey(),
+	novel_id: integer("novel_id").references(() => novels.id), // 关联小说
+	title: varchar("title", { length: 255 }), // 时间线标题
+	description: text("description"), // 时间线描述
+	nodes: json("nodes"), // 存储节点数据
+	edges: json("edges"), // 存储连接数据
+	created_at: timestamp("created_at").defaultNow(),
+	updated_at: timestamp("updated_at").defaultNow(),
+});
+
+// 时间线节点事件关联表
+export const timeline_events = pgTable("timeline_events", {
+	id: serial("id").primaryKey(),
+	timeline_id: integer("timeline_id").references(() => timelines.id),
+	event_id: integer("event_id").references(() => events.id),
+	node_id: varchar("node_id", { length: 100 }), // 对应时间线中的节点ID
+	created_at: timestamp("created_at").defaultNow(),
 });

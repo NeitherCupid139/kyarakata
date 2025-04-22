@@ -1,117 +1,88 @@
-import { useState, useEffect } from "react";
-import { supabase } from "@/lib/supabase";
+import { useState, useEffect, useRef } from "react";
+import {
+	useCharacters,
+	Character,
+	CreateCharacterData,
+} from "@/hooks/useCharacters";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { Search, Plus, Edit, Trash2, X, Check, UserRound } from "lucide-react";
-
-interface CharacterData {
-	id: number;
-	name: string;
-	gender: string;
-	age: number;
-	background: string;
-	personality: string;
-	created_at: string;
-	updated_at: string;
-}
+import {
+	Search,
+	Plus,
+	Edit,
+	Trash2,
+	X,
+	Check,
+	UserRound,
+	Upload,
+} from "lucide-react";
 
 function Characters() {
-	const [characters, setCharacters] = useState<CharacterData[]>([]);
-	const [loading, setLoading] = useState(true);
+	const {
+		loading,
+		characters: characterList,
+		fetchCharacters,
+		createCharacter,
+		updateCharacter,
+		deleteCharacter,
+		uploadAvatar,
+		uploadProgress,
+	} = useCharacters();
+
 	const [searchTerm, setSearchTerm] = useState("");
 	const [isModalOpen, setIsModalOpen] = useState(false);
-	const [currentCharacter, setCurrentCharacter] =
-		useState<CharacterData | null>(null);
-
-	const fetchCharacters = async () => {
-		try {
-			setLoading(true);
-			const { data, error } = await supabase
-				.from("characters")
-				.select("*")
-				.order("created_at", { ascending: false });
-
-			if (error) {
-				throw error;
-			}
-
-			setCharacters(data || []);
-		} catch (error) {
-			console.error("获取角色数据失败:", error);
-
-			// 演示用示例数据
-			setCharacters([
-				{
-					id: 1,
-					name: "赵云",
-					gender: "男",
-					age: 28,
-					background: "蜀国猛将，字子龙，常山人士",
-					personality: "忠诚勇敢，冷静沉着",
-					created_at: "2023-01-01T00:00:00Z",
-					updated_at: "2023-01-01T00:00:00Z",
-				},
-				{
-					id: 2,
-					name: "诸葛亮",
-					gender: "男",
-					age: 27,
-					background: "蜀国军师，字孔明，琅琊阳都人",
-					personality: "足智多谋，料事如神",
-					created_at: "2023-02-15T00:00:00Z",
-					updated_at: "2023-02-15T00:00:00Z",
-				},
-				{
-					id: 3,
-					name: "貂蝉",
-					gender: "女",
-					age: 19,
-					background: "董卓义女，中国古代四大美女之一",
-					personality: "温柔聪慧，心思缜密",
-					created_at: "2023-03-20T00:00:00Z",
-					updated_at: "2023-03-20T00:00:00Z",
-				},
-			]);
-		} finally {
-			setLoading(false);
-		}
-	};
+	const [currentCharacter, setCurrentCharacter] = useState<Character | null>(
+		null
+	);
+	const [isUploading, setIsUploading] = useState(false);
+	const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+	const fileInputRef = useRef<HTMLInputElement>(null);
 
 	useEffect(() => {
 		fetchCharacters();
 	}, []);
 
-	const filteredCharacters = characters.filter(
+	const filteredCharacters = characterList.filter(
 		(character) =>
 			character.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
 			character.gender.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			character.background.toLowerCase().includes(searchTerm.toLowerCase()) ||
-			character.personality.toLowerCase().includes(searchTerm.toLowerCase())
+			(character.background || "")
+				.toLowerCase()
+				.includes(searchTerm.toLowerCase()) ||
+			(character.personality || "")
+				.toLowerCase()
+				.includes(searchTerm.toLowerCase())
 	);
 
-	const openEditModal = (character: CharacterData) => {
+	const openEditModal = (character: Character) => {
 		setCurrentCharacter(character);
+		setAvatarPreview(character.avatar_url);
 		setIsModalOpen(true);
 	};
 
 	const openCreateModal = () => {
 		setCurrentCharacter(null);
+		setAvatarPreview(null);
 		setIsModalOpen(true);
 	};
 
 	const handleDeleteCharacter = async (id: number) => {
 		if (window.confirm("确定要删除这个角色吗？")) {
-			try {
-				// 真实应用中应该从Supabase删除角色
-				// const { error } = await supabase.from('characters').delete().eq('id', id);
-
-				// 演示目的，仅从状态中过滤掉该角色
-				setCharacters(characters.filter((character) => character.id !== id));
-			} catch (error) {
-				console.error("删除角色失败:", error);
-			}
+			await deleteCharacter(id);
 		}
+	};
+
+	const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+
+		// 本地预览
+		const reader = new FileReader();
+		reader.onload = (e) => {
+			setAvatarPreview(e.target?.result as string);
+		};
+		reader.readAsDataURL(file);
 	};
 
 	const handleSaveCharacter = async () => {
@@ -141,38 +112,78 @@ function Characters() {
 				throw new Error("无法获取表单元素");
 			}
 
-			const characterData = {
-				name: nameInput.value,
-				gender: genderSelect.value,
-				age: parseInt(ageInput.value) || 0,
-				background: backgroundTextarea.value,
-				personality: personalityTextarea.value,
-				updated_at: new Date().toISOString(),
-			};
+			// 准备数据
+			const name = nameInput.value;
+			const gender = genderSelect.value;
+			const ageValue = ageInput.value ? parseInt(ageInput.value) : undefined;
+			const background = backgroundTextarea.value || undefined;
+			const personality = personalityTextarea.value || undefined;
 
-			if (currentCharacter) {
-				// 更新现有角色
-				const { data, error } = await supabase
-					.from("characters")
-					.update(characterData)
-					.eq("id", currentCharacter.id)
-					.select();
+			const file = fileInputRef.current?.files?.[0];
 
-				if (error) throw error;
-				console.log("角色更新成功:", data);
+			// 如果有选择文件
+			if (file) {
+				setIsUploading(true);
+
+				if (currentCharacter) {
+					// 更新现有角色
+					const uploadedUrl = await uploadAvatar(file, currentCharacter.id);
+					if (uploadedUrl) {
+						await updateCharacter(currentCharacter.id, {
+							name,
+							gender,
+							age: ageValue,
+							background,
+							personality,
+							avatar_url: uploadedUrl,
+						});
+					}
+				} else {
+					// 创建新角色并上传头像
+					const newCharacterData: CreateCharacterData = {
+						name,
+						gender,
+						age: ageValue,
+						background,
+						personality,
+					};
+
+					const newCharacter = await createCharacter(newCharacterData);
+					if (newCharacter) {
+						const uploadedUrl = await uploadAvatar(file, newCharacter.id);
+						if (uploadedUrl) {
+							await updateCharacter(newCharacter.id, {
+								avatar_url: uploadedUrl,
+							});
+						}
+					}
+				}
+
+				setIsUploading(false);
 			} else {
-				// 创建新角色
-				const { data, error } = await supabase
-					.from("characters")
-					.insert([{ ...characterData, created_at: new Date().toISOString() }])
-					.select();
-
-				if (error) throw error;
-				console.log("角色创建成功:", data);
+				// 没有新的头像文件
+				if (currentCharacter) {
+					// 更新现有角色，保留原头像
+					await updateCharacter(currentCharacter.id, {
+						name,
+						gender,
+						age: ageValue,
+						background,
+						personality,
+					});
+				} else {
+					// 创建新角色，无头像
+					await createCharacter({
+						name,
+						gender,
+						age: ageValue,
+						background,
+						personality,
+					});
+				}
 			}
 
 			setIsModalOpen(false);
-			fetchCharacters(); // 重新获取角色列表
 		} catch (error) {
 			console.error("保存角色失败:", error);
 			alert("保存角色失败，请重试");
@@ -183,6 +194,49 @@ function Characters() {
 	const CharacterForm = () => {
 		return (
 			<div className="mt-5 space-y-4">
+				{/* 头像上传区域 */}
+				<div className="flex flex-col items-center space-y-2">
+					<div className="w-24 h-24 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden relative">
+						{avatarPreview ? (
+							<img
+								src={avatarPreview}
+								alt="角色头像"
+								className="w-full h-full object-cover"
+							/>
+						) : (
+							<UserRound className="h-12 w-12 text-gray-500 dark:text-gray-300" />
+						)}
+						<div
+							className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity cursor-pointer"
+							onClick={() => fileInputRef.current?.click()}
+						>
+							<Upload className="h-8 w-8 text-white" />
+						</div>
+					</div>
+					<input
+						type="file"
+						ref={fileInputRef}
+						accept="image/*"
+						className="hidden"
+						onChange={handleAvatarChange}
+					/>
+					<button
+						type="button"
+						onClick={() => fileInputRef.current?.click()}
+						className="text-sm text-blue-600 dark:text-blue-400 hover:underline"
+					>
+						上传头像
+					</button>
+					{isUploading && (
+						<div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+							<div
+								className="bg-blue-600 h-2.5 rounded-full"
+								style={{ width: `${uploadProgress}%` }}
+							></div>
+						</div>
+					)}
+				</div>
+
 				<Input
 					label="角色名称"
 					defaultValue={currentCharacter?.name || ""}
@@ -204,7 +258,7 @@ function Characters() {
 				<Input
 					label="年龄"
 					type="number"
-					defaultValue={currentCharacter?.age.toString() || ""}
+					defaultValue={currentCharacter?.age?.toString() || ""}
 					placeholder="输入角色年龄"
 				/>
 				<div>
@@ -274,7 +328,7 @@ function Characters() {
 					</div>
 				</div>
 
-				{loading ? (
+				{loading && characterList.length === 0 ? (
 					<div className="text-center py-4">加载角色中...</div>
 				) : (
 					<div className="overflow-x-auto">
@@ -328,8 +382,16 @@ function Characters() {
 										<tr key={character.id}>
 											<td className="px-6 py-4 whitespace-nowrap">
 												<div className="flex items-center">
-													<div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
-														<UserRound className="h-6 w-6 text-gray-500 dark:text-gray-300" />
+													<div className="flex-shrink-0 h-10 w-10 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center overflow-hidden">
+														{character.avatar_url ? (
+															<img
+																src={character.avatar_url}
+																alt={character.name}
+																className="h-10 w-10 object-cover"
+															/>
+														) : (
+															<UserRound className="h-6 w-6 text-gray-500 dark:text-gray-300" />
+														)}
 													</div>
 													<div className="ml-4">
 														<div className="text-sm font-medium text-gray-900 dark:text-white">
@@ -348,7 +410,9 @@ function Characters() {
 												{character.age}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-400">
-												{new Date(character.created_at).toLocaleDateString()}
+												{character.created_at instanceof Date
+													? character.created_at.toLocaleDateString()
+													: new Date(character.created_at).toLocaleDateString()}
 											</td>
 											<td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2 flex justify-end">
 												<button

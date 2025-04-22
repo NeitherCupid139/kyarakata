@@ -14,13 +14,6 @@ import { useAuthStore } from "@/store/authStore";
 import { cn } from "@/lib/utils";
 import { useState, useEffect } from "react";
 
-// ASCII 艺术标题
-const ASCII_TITLE = `
-╔═╗╔═╗╦  ╔═╗  ╦╔═╔═╗╔╦╗╔═╗
-║  ╠═╣║  ║╣   ╠╩╗╠═╣ ║ ╠═╣
-╚═╝╩ ╩╩═╝╚═╝  ╩ ╩╩ ╩ ╩ ╩ ╩
-`;
-
 function Sidebar() {
 	const location = useLocation();
 	const { logout } = useAuthStore();
@@ -49,19 +42,19 @@ function Sidebar() {
 	};
 
 	const navigation = [
-		{ name: "仪表盘", href: "/", icon: LayoutDashboard, ascii: "┌─┐" },
-		{ name: "角色管理", href: "/characters", icon: UserRound, ascii: "┌┼┐" },
-		{ name: "事件管理", href: "/events", icon: CalendarClock, ascii: "└┬┘" },
-		{ name: "角色关系", href: "/relationships", icon: Link2, ascii: "├─┤" },
-		{ name: "小说管理", href: "/novels", icon: BookOpen, ascii: "┌┘└┐" },
-		{ name: "章节管理", href: "/chapters", icon: BookText, ascii: "┌┴┐" },
+		{ name: "仪表盘", href: "/", icon: LayoutDashboard },
+		{ name: "角色管理", href: "/characters", icon: UserRound },
+		{ name: "事件管理", href: "/events", icon: CalendarClock },
+		{ name: "角色关系", href: "/relationships", icon: Link2 },
+		{ name: "小说管理", href: "/novels", icon: BookOpen },
+		{ name: "章节管理", href: "/chapters", icon: BookText },
+		{ name: "时间线", href: "/timelines", icon: CalendarClock },
 		{
 			name: "世界设定",
 			href: "/world-settings",
 			icon: GlobeLock,
-			ascii: "○◎●",
 		},
-		{ name: "系统设置", href: "/settings", icon: Settings, ascii: "⚙ ⚙" },
+		{ name: "系统设置", href: "/settings", icon: Settings },
 	];
 
 	return (
@@ -74,9 +67,6 @@ function Sidebar() {
 
 			{/* 标题区域 */}
 			<div className="flex flex-col items-center h-28 flex-shrink-0 px-4 pt-2 border-b-2 border-dashed border-cyan-400 dark:border-cyan-700 relative overflow-hidden">
-				<div className="text-xs font-mono whitespace-pre text-cyan-400 dark:text-cyan-400 animate-pulse">
-					{ASCII_TITLE}
-				</div>
 				<h1 className="text-xl font-bold font-mono tracking-widest text-cyan-400 dark:text-cyan-400 mt-1 relative">
 					<span className="animate-[textShadow_2s_infinite] tracking-[0.2em]">
 						Kyarakata
@@ -108,11 +98,6 @@ function Sidebar() {
 									"relative overflow-hidden group"
 								)}
 							>
-								{/* ASCII 艺术图标 */}
-								<span className="mr-3 font-mono text-xs inline-block w-8 text-center opacity-70 group-hover:animate-pulse">
-									{item.ascii}
-								</span>
-
 								{/* 实际图标 */}
 								<item.icon
 									className={cn(

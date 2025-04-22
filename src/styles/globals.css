@@ -2,6 +2,331 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 全局样式覆盖 */
+@layer base {
+	:root {
+		--background: 0 0% 100%;
+		--foreground: 222.2 84% 4.9%;
+
+		--card: 0 0% 100%;
+		--card-foreground: 222.2 84% 4.9%;
+
+		--popover: 0 0% 100%;
+		--popover-foreground: 222.2 84% 4.9%;
+
+		--primary: 222.2 47.4% 11.2%;
+		--primary-foreground: 210 40% 98%;
+
+		--secondary: 210 40% 96.1%;
+		--secondary-foreground: 222.2 47.4% 11.2%;
+
+		--muted: 210 40% 96.1%;
+		--muted-foreground: 215.4 16.3% 46.9%;
+
+		--accent: 210 40% 96.1%;
+		--accent-foreground: 222.2 47.4% 11.2%;
+
+		--destructive: 0 84.2% 60.2%;
+		--destructive-foreground: 210 40% 98%;
+
+		--border: 214.3 31.8% 91.4%;
+		--input: 214.3 31.8% 91.4%;
+		--ring: 222.2 84% 4.9%;
+
+		--radius: 0.5rem;
+	}
+
+	.dark {
+		--background: 222.2 84% 4.9%;
+		--foreground: 210 40% 98%;
+
+		--card: 222.2 84% 4.9%;
+		--card-foreground: 210 40% 98%;
+
+		--popover: 222.2 84% 4.9%;
+		--popover-foreground: 210 40% 98%;
+
+		--primary: 210 40% 98%;
+		--primary-foreground: 222.2 47.4% 11.2%;
+
+		--secondary: 217.2 32.6% 17.5%;
+		--secondary-foreground: 210 40% 98%;
+
+		--muted: 217.2 32.6% 17.5%;
+		--muted-foreground: 215 20.2% 65.1%;
+
+		--accent: 217.2 32.6% 17.5%;
+		--accent-foreground: 210 40% 98%;
+
+		--destructive: 0 62.8% 30.6%;
+		--destructive-foreground: 210 40% 98%;
+
+		--border: 217.2 32.6% 17.5%;
+		--input: 217.2 32.6% 17.5%;
+		--ring: 212.7 26.8% 83.9%;
+	}
+}
+
+/* 80年代复古计算机界面动画效果 */
+@layer utilities {
+	/* 扫描线动画 */
+	.animate-scanline {
+		animation: scanline 6s linear infinite;
+	}
+
+	@keyframes scanline {
+		0% {
+			transform: translateY(-100vh);
+		}
+		100% {
+			transform: translateY(100vh);
+		}
+	}
+
+	/* 颜色循环动画 */
+	.animate-colorCycle {
+		animation: colorCycle 8s linear infinite;
+	}
+
+	@keyframes colorCycle {
+		0% {
+			color: #10b981;
+		}
+		25% {
+			color: #06b6d4;
+		}
+		50% {
+			color: #3b82f6;
+		}
+		75% {
+			color: #8b5cf6;
+		}
+		100% {
+			color: #10b981;
+		}
+	}
+
+	/* 扫描效果动画 */
+	.animate-scan {
+		animation: scan 2s ease-in-out infinite;
+	}
+
+	@keyframes scan {
+		0% {
+			transform: translateX(-100%);
+		}
+		100% {
+			transform: translateX(100%);
+		}
+	}
+
+	/* CRT闪烁效果 */
+	.animate-flicker {
+		animation: flicker 0.3s ease-in-out infinite alternate;
+	}
+
+	@keyframes flicker {
+		0% {
+			opacity: 0.97;
+		}
+		100% {
+			opacity: 1;
+		}
+	}
+
+	/* 像素化背景网格 */
+	.bg-grid-pattern {
+		background-image: linear-gradient(to right, #10b981 1px, transparent 1px),
+			linear-gradient(to bottom, #10b981 1px, transparent 1px);
+		background-size: 20px 20px;
+	}
+}
+
+@layer base {
+	* {
+		@apply border-border;
+	}
+	body {
+		@apply bg-background text-foreground;
+	}
+}
+
+:root {
+	--terminal-green: #33ff33;
+	--terminal-bright-green: #88ff88;
+	--terminal-dim: #33cc33;
+	--terminal-red: #ff3333;
+	--terminal-amber: #ffb000;
+	--terminal-blue: #3333ff;
+	--terminal-cyan: #33ffff;
+	--terminal-magenta: #ff33ff;
+	--background-color: #111111;
+}
+
+body {
+	font-family: "Courier New", monospace;
+	background-color: var(--background-color);
+}
+
+/* ASCII 风格组件 */
+.ascii-title {
+	font-family: "Courier New", monospace;
+	letter-spacing: 0.5px;
+	font-weight: bold;
+}
+
+.terminal-text {
+	font-family: "Courier New", monospace;
+	color: var(--terminal-green);
+}
+
+.card-retro {
+	background-color: rgba(0, 0, 0, 0.8);
+	border: 1px solid var(--terminal-green);
+	box-shadow: 0 0 10px rgba(51, 255, 51, 0.2);
+	color: var(--terminal-green);
+}
+
+/* 闪烁光标效果 */
+.terminal-cursor {
+	animation: cursor-blink 1s step-end infinite;
+}
+
+@keyframes cursor-blink {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0;
+	}
+}
+
+.animate-cursor-blink {
+	position: relative;
+}
+
+.animate-cursor-blink::after {
+	content: "";
+	position: absolute;
+	right: -8px;
+	bottom: 0;
+	width: 8px;
+	height: 16px;
+	background-color: var(--terminal-green);
+	animation: cursor-blink 1s step-end infinite;
+}
+
+/* ASCII 图表样式 */
+.ascii-chart {
+	font-family: monospace;
+	white-space: pre;
+	overflow-x: auto;
+	padding: 10px 0;
+}
+
+.ascii-chart pre {
+	margin: 0;
+}
+
+/* 点击和触摸效果 */
+.card-retro:active {
+	box-shadow: 0 0 15px rgba(51, 255, 51, 0.4);
+	transform: scale(0.98);
+	transition: all 0.1s ease;
+}
+
+button:active,
+a:active,
+.click-effect:active {
+	text-shadow: 0 0 5px var(--terminal-green);
+	transform: scale(0.97);
+	transition: all 0.1s ease;
+}
+
+/* 故障效果 */
+.retro-glitch {
+	animation: glitch 0.2s linear;
+}
+
+@keyframes glitch {
+	0% {
+		transform: translate(0);
+	}
+	20% {
+		transform: translate(-5px, 5px);
+	}
+	40% {
+		transform: translate(-5px, -5px);
+	}
+	60% {
+		transform: translate(5px, 5px);
+	}
+	80% {
+		transform: translate(5px, -5px);
+	}
+	100% {
+		transform: translate(0);
+	}
+}
+
+/* 扫描线效果 */
+.crt-effect {
+	position: relative;
+	overflow: hidden;
+}
+
+.crt-effect::before {
+	content: "";
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: linear-gradient(
+		to bottom,
+		rgba(51, 255, 51, 0.03) 50%,
+		rgba(0, 0, 0, 0.03) 50%
+	);
+	background-size: 100% 4px;
+	z-index: 10;
+	pointer-events: none;
+	animation: scanline 8s linear infinite;
+}
+
+@keyframes scanline {
+	0% {
+		transform: translateY(0);
+	}
+	100% {
+		transform: translateY(100%);
+	}
+}
+
+/* 屏幕闪烁效果 */
+.screen-flicker {
+	animation: flicker 0.3s infinite alternate;
+}
+
+@keyframes flicker {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	10% {
+		opacity: 0.9;
+	}
+	20% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.7;
+	}
+	80% {
+		opacity: 0.9;
+	}
+}
+
 /* 老式CRT显示器效果 */
 @keyframes scanline {
 	0% {
